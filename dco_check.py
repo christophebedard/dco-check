@@ -166,7 +166,8 @@ def main() -> int:
             # print('name, email:', name, email)
             if not is_valid_email(email):
                 infractions[commit_sha].append(f'invalid email: {email}')
-            sign_offs_name_email.append((name, email))
+            else:
+                sign_offs_name_email.append((name, email))
         
         # Check that author is in the sign offs
         if not author_result in sign_offs_name_email:
