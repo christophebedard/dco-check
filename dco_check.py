@@ -39,6 +39,46 @@ def is_valid_email(
     return re.match(r'^\S+@\S+\.\S+', email)
 
 
+def get_head_commit_sha() -> Optional[str]:
+    command = [
+        'git',
+        'rev-parse',
+        '--verify',
+        'HEAD',
+    ]
+    run_output = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='UTF-8',
+    )
+    if run_output.returncode != 0:
+        print(f'error: {run_output.stdout}')
+        return None
+    return run_output.stdout.strip('\n')
+
+
+def get_common_ancestor_commit_sha(
+    base_ref: str,
+) -> Optional[str]:
+    command = [
+        'git',
+        'merge-base',
+        '--fork-point',
+        base_ref,
+    ]
+    run_output = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='UTF-8',
+    )
+    if run_output.returncode != 0:
+        print(f'error: {run_output.stdout}')
+        return None
+    return run_output.stdout.strip('\n')
+
+
 def get_commits_data(
     commit_sha_before: str,
     commit_sha: str,
@@ -126,8 +166,15 @@ def get_commits() -> Optional[Tuple[str, str]]:
             return None
         return commit_sha_before, commit_sha
     else:
-        print('could not detect CI')
-        return None
+        default_base_branch = 'master'
+        print(f'could not detect CI, falling back to default base branch: {default_base_branch}')
+        commit_sha_before = get_common_ancestor_commit_sha(default_base_branch)
+        if commit_sha_before is None:
+            return None
+        commit_sha = get_head_commit_sha()
+        if commit_sha is None:
+            return None
+        return commit_sha_before, commit_sha
 
 
 def main() -> int:
@@ -135,6 +182,7 @@ def main() -> int:
     if commits is None:
         return 1
     commit_sha_before, commit_sha = commits
+    # print(f'commits: {commits}')
 
     commits_data = get_commits_data(commit_sha_before, commit_sha)
     # print(f'commits_data: {str(commits_data)}')
