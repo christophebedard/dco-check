@@ -114,15 +114,20 @@ def extract_name_and_email(
 
 
 def get_commits() -> Optional[Tuple[str, str]]:
-    commit_sha = os.environ.get(ENV_COMMIT_SHA, None)
-    if commit_sha is None:
-        print(f'could not get environment variable: \'{ENV_COMMIT_SHA}\'')
+    if os.environ.get('GITLAB_CI', None) is not None:
+        print('detected GitLab CI')
+        commit_sha = os.environ.get(ENV_COMMIT_SHA, None)
+        if commit_sha is None:
+            print(f'could not get environment variable: \'{ENV_COMMIT_SHA}\'')
+            return None
+        commit_sha_before = os.environ.get(ENV_COMMIT_SHA_BEFORE, None)
+        if commit_sha_before is None:
+            print(f'could not get environment variable: \'{ENV_COMMIT_SHA_BEFORE}\'')
+            return None
+        return commit_sha_before, commit_sha
+    else:
+        print('could not detect CI')
         return None
-    commit_sha_before = os.environ.get(ENV_COMMIT_SHA_BEFORE, None)
-    if commit_sha_before is None:
-        print(f'could not get environment variable: \'{ENV_COMMIT_SHA_BEFORE}\'')
-        return None
-    return commit_sha_before, commit_sha
 
 
 def main() -> int:
