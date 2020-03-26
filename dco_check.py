@@ -31,6 +31,14 @@ ENV_COMMIT_SHA_BEFORE = 'CI_COMMIT_BEFORE_SHA'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 
+def is_valid_email(
+    email: str,
+) -> bool:
+    # Simple regex checking for:
+    # <nonwhitespace string>@<nonwhitespace string>.<nonwhitespace string>
+    return re.match(r'^\S+@\S+\.\S+', email)
+
+
 def get_commits_data(
     commit_sha_before: str,
     commit_sha: str,
@@ -103,14 +111,6 @@ def extract_name_and_email(
     if name_match is None:
         return None
     return name_match.group(1), email_match.group(1)
-
-
-def is_valid_email(
-    email: str,
-) -> bool:
-    # Simple regex checking for:
-    # <nonwhitespace string>@<nonwhitespace string>.<nonwhitespace string>
-    return re.match(r'^\S+@\S+\.\S+', email)
 
 
 def get_commits() -> Optional[Tuple[str, str]]:
