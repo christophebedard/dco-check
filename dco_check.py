@@ -113,15 +113,23 @@ def is_valid_email(
     return re.match(r'^\S+@\S+\.\S+', email)
 
 
-def main() -> int:
+def get_commits() -> Optional[Tuple[str, str]]:
     commit_sha = os.environ.get(ENV_COMMIT_SHA, None)
     if commit_sha is None:
         print(f'could not get environment variable: \'{ENV_COMMIT_SHA}\'')
-        return 1
+        return None
     commit_sha_before = os.environ.get(ENV_COMMIT_SHA_BEFORE, None)
     if commit_sha_before is None:
         print(f'could not get environment variable: \'{ENV_COMMIT_SHA_BEFORE}\'')
+        return None
+    return commit_sha_before, commit_sha
+
+
+def main() -> int:
+    commits = get_commits()
+    if commits is None:
         return 1
+    commit_sha_before, commit_sha = commits
 
     commits_data = get_commits_data(commit_sha_before, commit_sha)
     # print(f'commits_data: {str(commits_data)}')
