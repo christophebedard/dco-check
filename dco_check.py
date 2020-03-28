@@ -264,6 +264,8 @@ def main() -> int:
             for commit_infraction in commit_infractions:
                 print(f'\t{commit_infraction}')
         return 1
+    if len(individual_commits) == 0:
+        print('warning: no commits were actually checked')
     print('Good')
     return 0
 
