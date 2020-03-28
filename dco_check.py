@@ -25,9 +25,6 @@ from typing import Optional
 from typing import Tuple
 
 
-# See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-ENV_COMMIT_SHA = 'CI_COMMIT_SHA'
-ENV_COMMIT_SHA_BEFORE = 'CI_COMMIT_BEFORE_SHA'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 
@@ -156,13 +153,16 @@ def extract_name_and_email(
 def get_commits() -> Optional[Tuple[str, str]]:
     if os.environ.get('GITLAB_CI', None) is not None:
         print('detected GitLab CI')
-        commit_sha = os.environ.get(ENV_COMMIT_SHA, None)
+        # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+        GITLAB_ENV_COMMIT_SHA = 'CI_COMMIT_SHA'
+        GITLAB_ENV_COMMIT_SHA_BEFORE = 'CI_COMMIT_BEFORE_SHA'
+        commit_sha = os.environ.get(GITLAB_ENV_COMMIT_SHA, None)
         if commit_sha is None:
-            print(f'could not get environment variable: \'{ENV_COMMIT_SHA}\'')
+            print(f'could not get environment variable: \'{GITLAB_ENV_COMMIT_SHA}\'')
             return None
-        commit_sha_before = os.environ.get(ENV_COMMIT_SHA_BEFORE, None)
+        commit_sha_before = os.environ.get(GITLAB_ENV_COMMIT_SHA_BEFORE, None)
         if commit_sha_before is None:
-            print(f'could not get environment variable: \'{ENV_COMMIT_SHA_BEFORE}\'')
+            print(f'could not get environment variable: \'{GITLAB_ENV_COMMIT_SHA_BEFORE}\'')
             return None
         return commit_sha_before, commit_sha
     else:
