@@ -14,6 +14,7 @@
 
 """Check that all commits for a proposed change are signed off."""
 
+import argparse
 from collections import defaultdict
 import os
 import re
@@ -26,6 +27,19 @@ from typing import Tuple
 
 
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description='Check that all commits of a proposed change have a DCO (i.e. are signed-off)',
+    )
+    parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        default=False,
+        help='verbose mode (print out more information)',
+    )
+    return parser.parse_args()
 
 
 def is_valid_email(
@@ -178,29 +192,36 @@ def get_commits() -> Optional[Tuple[str, str]]:
 
 
 def main() -> int:
+    args = parse_args()
+    verbose = args.verbose
+
+    def verbose_print(msg, *args, **kwargs) -> None:
+        if verbose:
+            print(msg, *args, **kwargs)
+
     commits = get_commits()
     if commits is None:
         return 1
     commit_sha_before, commit_sha = commits
-    # print(f'commits: {commits}')
+    verbose_print('commits:', commits)
 
     commits_data = get_commits_data(commit_sha_before, commit_sha)
-    # print(f'commits_data: {str(commits_data)}')
+    verbose_print('commits_data:', commits_data)
     if commits_data is None:
         return 1
 
     individual_commits = split_commits_data(commits_data)
-    # print('individual_commits:', individual_commits)
+    verbose_print('individual_commits:', individual_commits)
 
     infractions: Dict[str, List[str]] = defaultdict(list)
     for commit_data in individual_commits:
         commit_lines = commit_data.split('\n')
         commit_sha = commit_lines[0]
-        # print('commit_sha:', commit_sha)
+        verbose_print('commit_sha:', commit_sha)
         commit_author_data = commit_lines[1]
-        # print('commit_author_data:', commit_author_data)
+        verbose_print('commit_author_data:', commit_author_data)
         commit_body = commit_lines[2:]
-        # print('commit_body:', commit_body)
+        verbose_print('commit_body:', commit_body)
 
         # Extract author name and email
         author_result = extract_name_and_email(commit_author_data)
@@ -224,7 +245,7 @@ def main() -> int:
         sign_offs_name_email: List[Tuple[str, str]] = []
         for sign_off in sign_offs:
             name, email = extract_name_and_email(sign_off)
-            # print('name, email:', name, email)
+            verbose_print('name, email:', name, email)
             if not is_valid_email(email):
                 infractions[commit_sha].append(f'invalid email: {email}')
             else:
