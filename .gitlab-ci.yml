@@ -3,7 +3,5 @@ variables:
 
 dco_check:
   image: python:3
-  before_script:
-    - apt-get update && apt-get install git
   script:
     - python3 dco_check.py
