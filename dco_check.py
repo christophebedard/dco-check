@@ -183,15 +183,25 @@ def get_commits() -> Optional[Tuple[str, str]]:
     if get_env_var('GITLAB_CI', False) is not None:
         print('detected GitLab CI')
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        GITLAB_ENV_COMMIT_SHA = 'CI_COMMIT_SHA'
-        GITLAB_ENV_COMMIT_SHA_BEFORE = 'CI_COMMIT_BEFORE_SHA'
-        commit_sha = get_env_var(GITLAB_ENV_COMMIT_SHA)
+        default_branch = get_env_var('CI_DEFAULT_BRANCH', default='master')
+
+        commit_sha = get_env_var('CI_COMMIT_SHA')
         if commit_sha is None:
             return None
-        commit_sha_before = get_env_var(GITLAB_ENV_COMMIT_SHA_BEFORE, None)
-        if commit_sha_before is None:
-            return None
-        return commit_sha_before, commit_sha
+
+        # If we're on the default branch, just test new commits
+        current_branch = get_env_var('CI_COMMIT_BRANCH')
+        if current_branch is not None and current_branch == default_branch:
+            commit_sha_before = get_env_var('CI_COMMIT_BEFORE_SHA', None)
+            if commit_sha_before is None:
+                return None
+            return commit_sha_before, commit_sha
+        else:
+            # Otherwise test all commits off of the default branch
+            commit_sha_before = get_common_ancestor_commit_sha(default_branch)
+            if commit_sha_before is None:
+                return None
+            return commit_sha_before, commit_sha
     else:
         default_base_branch = 'master'
         print(f'could not detect CI, falling back to default base branch: {default_base_branch}')
