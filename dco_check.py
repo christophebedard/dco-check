@@ -164,19 +164,27 @@ def extract_name_and_email(
     return name_match.group(1), email_match.group(1)
 
 
+def get_env_var(
+    env_var: str,
+    print_if_not_found: bool = True,
+) -> Optional[str]:
+    value = os.environ.get(env_var, None)
+    if value is None:
+        print(f'could not get environment variable: \'{env_var}\'')
+    return value
+
+
 def get_commits() -> Optional[Tuple[str, str]]:
-    if os.environ.get('GITLAB_CI', None) is not None:
+    if get_env_var('GITLAB_CI', False) is not None:
         print('detected GitLab CI')
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         GITLAB_ENV_COMMIT_SHA = 'CI_COMMIT_SHA'
         GITLAB_ENV_COMMIT_SHA_BEFORE = 'CI_COMMIT_BEFORE_SHA'
-        commit_sha = os.environ.get(GITLAB_ENV_COMMIT_SHA, None)
+        commit_sha = get_env_var(GITLAB_ENV_COMMIT_SHA)
         if commit_sha is None:
-            print(f'could not get environment variable: \'{GITLAB_ENV_COMMIT_SHA}\'')
             return None
-        commit_sha_before = os.environ.get(GITLAB_ENV_COMMIT_SHA_BEFORE, None)
+        commit_sha_before = get_env_var(GITLAB_ENV_COMMIT_SHA_BEFORE, None)
         if commit_sha_before is None:
-            print(f'could not get environment variable: \'{GITLAB_ENV_COMMIT_SHA_BEFORE}\'')
             return None
         return commit_sha_before, commit_sha
     else:
