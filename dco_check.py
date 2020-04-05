@@ -167,10 +167,15 @@ def extract_name_and_email(
 def get_env_var(
     env_var: str,
     print_if_not_found: bool = True,
+    default: str = None,
 ) -> Optional[str]:
     value = os.environ.get(env_var, None)
     if value is None:
-        print(f'could not get environment variable: \'{env_var}\'')
+        if default is not None:
+            print(f'could not get environment variable: \'{env_var}\'; using value default value: \'{default}\'')
+            value = default
+        else:
+            print(f'could not get environment variable: \'{env_var}\'')
     return value
 
 
