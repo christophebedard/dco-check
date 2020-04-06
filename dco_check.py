@@ -27,6 +27,7 @@ from typing import Tuple
 
 
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
+DEFAULT_DEFAULT_BRANCH = 'master'
 
 
 def parse_args() -> argparse.Namespace:
@@ -183,7 +184,7 @@ def get_commits() -> Optional[Tuple[str, str]]:
     if get_env_var('GITLAB_CI', False) is not None:
         print('detected GitLab CI')
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        default_branch = get_env_var('CI_DEFAULT_BRANCH', default='master')
+        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=DEFAULT_DEFAULT_BRANCH)
 
         commit_sha = get_env_var('CI_COMMIT_SHA')
         if commit_sha is None:
@@ -203,9 +204,8 @@ def get_commits() -> Optional[Tuple[str, str]]:
                 return None
             return commit_sha_before, commit_sha
     else:
-        default_base_branch = 'master'
-        print(f'could not detect CI, falling back to default base branch: {default_base_branch}')
-        commit_sha_before = get_common_ancestor_commit_sha(default_base_branch)
+        print(f'could not detect CI, falling back to default base branch: {DEFAULT_DEFAULT_BRANCH}')
+        commit_sha_before = get_common_ancestor_commit_sha(DEFAULT_DEFAULT_BRANCH)
         if commit_sha_before is None:
             return None
         commit_sha = get_head_commit_sha()
