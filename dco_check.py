@@ -272,7 +272,7 @@ def main() -> int:
     verbose_print(f'commits: {commit_sha_before}..{commit_sha}')
 
     commits_data = get_commits_data(commit_sha_before, commit_sha)
-    verbose_print('commits_data:', commits_data)
+    verbose_print('commits_data:', ('\n' + commits_data).replace('\n', '\n\t'))
     if commits_data is None:
         return 1
 
