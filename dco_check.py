@@ -47,12 +47,24 @@ def parse_args() -> argparse.Namespace:
 def is_valid_email(
     email: str,
 ) -> bool:
-    # Simple regex checking for:
-    # <nonwhitespace string>@<nonwhitespace string>.<nonwhitespace string>
+    """
+    Check if email is valid.
+
+    Simple regex checking for:
+        <nonwhitespace string>@<nonwhitespace string>.<nonwhitespace string>
+
+    :param email: the email address to check
+    :return: true if email is valid, false otherwise
+    """
     return re.match(r'^\S+@\S+\.\S+', email)
 
 
 def get_head_commit_sha() -> Optional[str]:
+    """
+    Get the sha of the HEAD commit.
+
+    :return: the sha of the HEAD commit, or `None` if it failed
+    """
     command = [
         'git',
         'rev-parse',
@@ -74,6 +86,14 @@ def get_head_commit_sha() -> Optional[str]:
 def get_common_ancestor_commit_sha(
     base_ref: str,
 ) -> Optional[str]:
+    """
+    Get the common ancestor commit of the current commit and a given reference.
+
+    See: git merge-base --fork-point
+
+    :param base_ref: the other reference
+    :return: the common ancestor commit, or `None` if it failed
+    """
     command = [
         'git',
         'merge-base',
@@ -171,6 +191,14 @@ def get_env_var(
     print_if_not_found: bool = True,
     default: str = None,
 ) -> Optional[str]:
+    """
+    Get the value of an environment variable.
+
+    :param env_var: the environment variable name/key
+    :param print_if_not_found: whether to print if the environment variable could not be found
+    :param default: the value to use if the environment variable could not be found
+    :return: the environment variable value, or `None` if not found and no default value was given
+    """
     value = os.environ.get(env_var, None)
     if value is None:
         if default is not None:
@@ -185,6 +213,14 @@ def get_env_var(
 def get_commits(
     verbose_print: Callable[[Any], None],
 ) -> Optional[Tuple[str, str]]:
+    """
+    Get the range of commits to be checked: (last commit that was checked, latest commit).
+
+    The range excludes the first commit, e.g. ]first commit, second commit]
+
+    :param verbose_print: the function to use for verbose prints
+    :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
+    """
     if get_env_var('GITLAB_CI', print_if_not_found=False) is not None:
         print('detected GitLab CI')
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
