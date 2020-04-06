@@ -4,4 +4,4 @@ variables:
 dco_check:
   image: python:3
   script:
-    - python3 dco_check.py
+    - python3 dco_check.py --verbose
