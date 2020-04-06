@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 import sys
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -181,7 +182,9 @@ def get_env_var(
     return value
 
 
-def get_commits() -> Optional[Tuple[str, str]]:
+def get_commits(
+    verbose_print: Callable[[Any], None],
+) -> Optional[Tuple[str, str]]:
     if get_env_var('GITLAB_CI', print_if_not_found=False) is not None:
         print('detected GitLab CI')
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -194,12 +197,14 @@ def get_commits() -> Optional[Tuple[str, str]]:
         # If we're on the default branch, just test new commits
         current_branch = get_env_var('CI_COMMIT_BRANCH')
         if current_branch is not None and current_branch == default_branch:
+            verbose_print(f'on default branch \'{current_branch}\': will check new commits')
             commit_sha_before = get_env_var('CI_COMMIT_BEFORE_SHA')
             if commit_sha_before is None:
                 return None
             return commit_sha_before, commit_sha
         else:
             # Otherwise test all commits off of the default branch
+            verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             commit_sha_before = get_common_ancestor_commit_sha(default_branch)
             if commit_sha_before is None:
                 return None
@@ -223,7 +228,7 @@ def main() -> int:
         if verbose:
             print(msg, *args, **kwargs)
 
-    commits = get_commits()
+    commits = get_commits(verbose_print)
     if commits is None:
         return 1
     commit_sha_before, commit_sha = commits
