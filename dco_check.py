@@ -173,15 +173,16 @@ def get_env_var(
     value = os.environ.get(env_var, None)
     if value is None:
         if default is not None:
-            print(f'could not get environment variable: \'{env_var}\'; using value default value: \'{default}\'')
+            if print_if_not_found:
+                print(f'could not get environment variable: \'{env_var}\'; using value default value: \'{default}\'')
             value = default
-        else:
+        elif print_if_not_found:
             print(f'could not get environment variable: \'{env_var}\'')
     return value
 
 
 def get_commits() -> Optional[Tuple[str, str]]:
-    if get_env_var('GITLAB_CI', False) is not None:
+    if get_env_var('GITLAB_CI', print_if_not_found=False) is not None:
         print('detected GitLab CI')
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         default_branch = get_env_var('CI_DEFAULT_BRANCH', default=DEFAULT_DEFAULT_BRANCH)
@@ -193,7 +194,7 @@ def get_commits() -> Optional[Tuple[str, str]]:
         # If we're on the default branch, just test new commits
         current_branch = get_env_var('CI_COMMIT_BRANCH')
         if current_branch is not None and current_branch == default_branch:
-            commit_sha_before = get_env_var('CI_COMMIT_BEFORE_SHA', None)
+            commit_sha_before = get_env_var('CI_COMMIT_BEFORE_SHA')
             if commit_sha_before is None:
                 return None
             return commit_sha_before, commit_sha
