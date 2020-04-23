@@ -45,6 +45,31 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def run(
+    command: List[str],
+) -> Optional[str]:
+    """
+    Run command.
+
+    :param command: the command list
+    :return: the stdout output if the return code is 0, otherwise `None`
+    """
+    output = None
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        output_stdout, _ = process.communicate()
+        if process.returncode != 0:
+            print(f'error: {output_stdout.decode("utf8")}')
+        else:
+            output = output_stdout.rstrip().decode('utf8').strip('\n')
+    except subprocess.CalledProcessError as e:
+        print(f'error: {e.output.decode("utf8")}')
+    return output
+
 def is_valid_email(
     email: str,
 ) -> bool:
@@ -72,16 +97,7 @@ def get_head_commit_sha() -> Optional[str]:
         '--verify',
         'HEAD',
     ]
-    run_output = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='UTF-8',
-    )
-    if run_output.returncode != 0:
-        print(f'error: {run_output.stdout}')
-        return None
-    return run_output.stdout.strip('\n')
+    return run(command)
 
 
 def get_common_ancestor_commit_sha(
@@ -101,16 +117,7 @@ def get_common_ancestor_commit_sha(
         '--fork-point',
         base_ref,
     ]
-    run_output = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='UTF-8',
-    )
-    if run_output.returncode != 0:
-        print(f'error: {run_output.stdout}')
-        return None
-    return run_output.stdout.strip('\n')
+    return run(command)
 
 
 def get_commits_data(
@@ -138,16 +145,7 @@ def get_commits_data(
         '--pretty=%H%n%an <%ae>%n%-b%x1e',
         '--no-merges',
     ]
-    run_output = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='UTF-8',
-    )
-    if run_output.returncode != 0:
-        print(f'error: {run_output.stdout}')
-        return None
-    return run_output.stdout
+    return run(command)
 
 
 def split_commits_data(
