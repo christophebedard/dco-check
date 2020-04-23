@@ -1,0 +1,13 @@
+branches:
+branches:
+  only:
+    - master
+
+language: python
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+dist: bionic
+script:
+  - python3 dco_check.py --verbose

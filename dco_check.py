@@ -136,6 +136,7 @@ def get_commits_data(
         'log',
         f'{commit_sha_before}..{commit_sha}',
         '--pretty=%H%n%an <%ae>%n%-b%x1e',
+        '--no-merges',
     ]
     run_output = subprocess.run(
         command,
