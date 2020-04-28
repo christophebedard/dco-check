@@ -1,0 +1,21 @@
+version: 2.1
+
+jobs:
+  check-DCO:
+    parameters:
+      python_version:
+        type: string
+    docker:
+      - image: python:<< parameters.python_version >>
+    steps:
+      - checkout
+      - run:
+          command: python3 dco_check.py --verbose
+
+workflows:
+  workflow:
+    jobs:
+      - check-DCO:
+          matrix:
+            parameters:
+              python_version: ["3.6", "3.7", "3.8"]
