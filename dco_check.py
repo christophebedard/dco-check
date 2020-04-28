@@ -342,22 +342,38 @@ class GitHubRetriever(CommitDataRetriever):
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        verbose_print('GITHUB_EVENT_NAME:', get_env_var('GITHUB_EVENT_NAME'))
-        # See: https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables
-        event_payload_path = get_env_var('GITHUB_EVENT_PATH')
-        if event_payload_path is None:
-            return None
         self.github_token = get_env_var('GITHUB_TOKEN')
         if self.github_token is None:
             print('Did you forget to include this in your workflow config?')
             print('\n\tenv:\n\t\tGITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}')
             return None
+
+        # See: https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables
+        event_payload_path = get_env_var('GITHUB_EVENT_PATH')
+        if event_payload_path is None:
+            return None
         f = open(event_payload_path)
         self.event_payload = json.load(f)
         f.close()
-        # See: https://developer.github.com/v3/activity/events/types/#pullrequestevent
-        commit_hash_base = self.event_payload['pull_request']['base']['sha']
-        commit_hash_head = self.event_payload['pull_request']['head']['sha']
+
+        # Get base & head commits depending on the workflow event type
+        event_name = get_env_var('GITHUB_EVENT_NAME')
+        if event_name is None:
+            return None
+        verbose_print('workflow event type:', event_name)
+        commit_hash_base = None
+        commit_hash_head = None
+        if event_name == 'pull_request':
+            # See: https://developer.github.com/v3/activity/events/types/#pullrequestevent
+            commit_hash_base = self.event_payload['pull_request']['base']['sha']
+            commit_hash_head = self.event_payload['pull_request']['head']['sha']
+        elif event_name == 'push':
+            # See: https://developer.github.com/v3/activity/events/types/#pushevent
+            commit_hash_base = self.event_payload['before']
+            commit_hash_head = self.event_payload['head']
+        else:
+            print('Unknown workflow event:', event_name)
+            return None
         return commit_hash_base, commit_hash_head
 
     def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
