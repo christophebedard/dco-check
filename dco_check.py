@@ -70,6 +70,7 @@ def run(
         print(f'error: {e.output.decode("utf8")}')
     return output
 
+
 def is_valid_email(
     email: str,
 ) -> bool:
@@ -85,11 +86,11 @@ def is_valid_email(
     return re.match(r'^\S+@\S+\.\S+', email)
 
 
-def get_head_commit_sha() -> Optional[str]:
+def get_head_commit_hash() -> Optional[str]:
     """
-    Get the sha of the HEAD commit.
+    Get the hash of the HEAD commit.
 
-    :return: the sha of the HEAD commit, or `None` if it failed
+    :return: the hash of the HEAD commit, or `None` if it failed
     """
     command = [
         'git',
@@ -100,7 +101,7 @@ def get_head_commit_sha() -> Optional[str]:
     return run(command)
 
 
-def get_common_ancestor_commit_sha(
+def get_common_ancestor_commit_hash(
     base_ref: str,
 ) -> Optional[str]:
     """
@@ -121,28 +122,29 @@ def get_common_ancestor_commit_sha(
 
 
 def get_commits_data(
-    commit_sha_before: str,
-    commit_sha: str,
+    base: str,
+    head: str,
 ) -> Optional[str]:
     """
     Get data (full sha & commit body) for commits in a range.
 
-    The range excludes the 'before' commit, e.g. ]commit_sha_before, commit_sha]
+    The range excludes the 'before' commit, e.g. ]base, head]
     The output data contains data for individual commits, separated by special characters:
        * 1st line: full commit sha
        * 2nd line: author name and email
+       * 3rd line: commit title (subject)
        * subsequent lines: commit body (which excludes the commit title line)
        * record separator (0x1e)
 
-    :param commit_sha_before: the sha of the commit just before the start of the range
-    :param commit_sha: the sha of the last commit of the range
+    :param base: the sha of the commit just before the start of the range
+    :param head: the sha of the last commit of the range
     :return: the data, or `None` if it failed
     """
     command = [
         'git',
         'log',
-        f'{commit_sha_before}..{commit_sha}',
-        '--pretty=%H%n%an <%ae>%n%-b%x1e',
+        f'{base}..{head}',
+        '--pretty=%H%n%an <%ae>%n%s%n%-b%x1e',
         '--no-merges',
     ]
     return run(command)
@@ -210,100 +212,181 @@ def get_env_var(
     return value
 
 
-def get_commits(
-    verbose_print: Callable[[Any], None],
-) -> Optional[Tuple[str, str]]:
-    """
-    Get the range of commits to be checked: (last commit that was checked, latest commit).
+class CommitInfo:
 
-    The range excludes the first commit, e.g. ]first commit, second commit]
+    def __init__(
+        self,
+        hash: str,
+        title: str,
+        body: List[str],
+        author_name: str,
+        author_email: str,
+    ) -> None:
+        self.hash = hash
+        self.title = title
+        self.body = body
+        self.author_name = author_name
+        self.author_email = author_email
 
-    :param verbose_print: the function to use for verbose prints
-    :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-    """
-    if get_env_var('GITLAB_CI', print_if_not_found=False) is not None:
-        print('detected GitLab CI')
+    def __repr__(self) -> str:
+        return f'hash: {self.hash}\ntitle: {self.title}\nbody: {self.body}\nauthor: {self.author_name} <{self.author_email}>'
+
+
+class CommitDataRetriever:
+
+    def name(self) -> str:
+        """Get a name that represents this retriever."""
+        raise NotImplementedError
+
+    def applies(self) -> bool:
+        """Check if this retriever applies, i.e. can provide commit data."""
+        raise NotImplementedError
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:
+        """
+        Get the range of commits to be checked: (last commit that was checked, latest commit).
+
+        The range excludes the first commit, e.g. ]first commit, second commit]
+
+        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
+        """
+        raise NotImplementedError
+
+    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
+        """Get commit data."""
+        raise NotImplementedError
+
+
+class GitRetriever(CommitDataRetriever):
+
+    def name(self) -> str:
+        return 'Git (default)'
+
+    def applies(self) -> bool:
+        # Unless we only have access to a partial commit history
+        return True
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:
+        commit_hash_base = get_common_ancestor_commit_hash(DEFAULT_DEFAULT_BRANCH)
+        if commit_hash_base is None:
+            return None
+        commit_hash_head = get_head_commit_hash()
+        if commit_hash_head is None:
+            return None
+        return commit_hash_base, commit_hash_head
+
+    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
+        commits_data = get_commits_data(base, head)
+        individual_commits = split_commits_data(commits_data)
+        commits = []
+        for commit_data in individual_commits:
+            commit_lines = commit_data.split('\n')
+            commit_hash = commit_lines[0]
+            commit_author_data = commit_lines[1]
+            commit_title = commit_lines[2]
+            commit_body = commit_lines[3:]
+            author_result = extract_name_and_email(commit_author_data)
+            author_name, author_email = None, None
+            if author_result is not None:
+                author_name, author_email = author_result
+            commits.append(CommitInfo(commit_hash, commit_title, commit_body, author_name, author_email))
+        return commits
+
+
+class GitlabRetriever(CommitDataRetriever):
+
+    def name(self) -> str:
+        return 'GitLab'
+
+    def applies(self) -> bool:
+        return get_env_var('GITLAB_CI', print_if_not_found=False) is not None
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         default_branch = get_env_var('CI_DEFAULT_BRANCH', default=DEFAULT_DEFAULT_BRANCH)
 
-        commit_sha = get_env_var('CI_COMMIT_SHA')
-        if commit_sha is None:
+        commit_hash_head = get_env_var('CI_COMMIT_SHA')
+        if commit_hash_head is None:
             return None
 
         # If we're on the default branch, just test new commits
         current_branch = get_env_var('CI_COMMIT_BRANCH')
         if current_branch is not None and current_branch == default_branch:
             verbose_print(f'on default branch \'{current_branch}\': will check new commits')
-            commit_sha_before = get_env_var('CI_COMMIT_BEFORE_SHA')
-            if commit_sha_before is None:
+            commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
+            if commit_hash_base is None:
                 return None
-            return commit_sha_before, commit_sha
+            return commit_hash_base, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
             verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
-            commit_sha_before = get_common_ancestor_commit_sha(default_branch)
-            if commit_sha_before is None:
+            commit_hash_base = get_common_ancestor_commit_hash(default_branch)
+            if commit_hash_base is None:
                 return None
-            return commit_sha_before, commit_sha
-    else:
-        print(f'could not detect CI, falling back to default base branch: {DEFAULT_DEFAULT_BRANCH}')
-        commit_sha_before = get_common_ancestor_commit_sha(DEFAULT_DEFAULT_BRANCH)
-        if commit_sha_before is None:
-            return None
-        commit_sha = get_head_commit_sha()
-        if commit_sha is None:
-            return None
-        return commit_sha_before, commit_sha
+            return commit_hash_base, commit_hash_head
+
+    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
+        return GitRetriever().get_commits(base, head)
+
+
+# TODO find a better way to do this
+verbose = False
+def verbose_print(msg, *args, **kwargs) -> None:
+    global verbose
+    if verbose:
+        print(msg, *args, **kwargs)
 
 
 def main() -> int:
     args = parse_args()
+    global verbose
     verbose = args.verbose
 
-    def verbose_print(msg, *args, **kwargs) -> None:
-        if verbose:
-            print(msg, *args, **kwargs)
+    # Detect CI
+    # Use first one that applies
+    commit_retriever = None
+    for retriever_cls in [GitlabRetriever, GitRetriever]:
+        retriever = retriever_cls()
+        if retriever.applies():
+            commit_retriever = retriever
+            break
+    print('detected:', commit_retriever.name())
 
-    commits = get_commits(verbose_print)
+    # Get range of commits
+    commit_range = commit_retriever.get_commit_range()
+    if commit_range is None:
+        return 1
+    commit_hash_base, commit_hash_head = commit_range
+    verbose_print(f'commit range: {commit_hash_base}..{commit_hash_head}')
+
+    # Get commits
+    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head)
+    verbose_print('commits:', ('\n' + commits.__repr__()).replace('\n', '\n\t'))
     if commits is None:
         return 1
-    commit_sha_before, commit_sha = commits
-    verbose_print(f'commits: {commit_sha_before}..{commit_sha}')
 
-    commits_data = get_commits_data(commit_sha_before, commit_sha)
-    verbose_print('commits_data:', ('\n' + commits_data.strip('\n')).replace('\n', '\n\t'))
-    if commits_data is None:
-        return 1
-
-    individual_commits = split_commits_data(commits_data)
-    verbose_print('individual_commits:', individual_commits)
-
+    # Process them
     infractions: Dict[str, List[str]] = defaultdict(list)
-    for commit_data in individual_commits:
-        commit_lines = commit_data.split('\n')
-        commit_sha = commit_lines[0]
-        verbose_print('commit_sha:', commit_sha)
-        commit_author_data = commit_lines[1]
-        verbose_print('commit_author_data:', commit_author_data)
-        commit_body = commit_lines[2:]
-        verbose_print('commit_body:', commit_body)
+    for commit in commits:
+        verbose_print('commit hash:', commit.hash)
+        verbose_print('commit author:', commit.author_name, commit.author_email)
+        verbose_print('commit body:', commit.body)
 
-        # Extract author name and email
-        author_result = extract_name_and_email(commit_author_data)
-        if author_result is None:
-            infractions[commit_sha].append(f'could not extract author data: {commit_author_data}')
+        # Check author name and email
+        if any(d is None for d in [commit.author_name, commit.author_email]):
+            infractions[commit.hash].append(f'could not extract author data for commit: {commit.hash}')
             continue
 
         # Extract sign off data
         sign_offs = [
             body_line.replace(TRAILER_KEY_SIGNED_OFF_BY, '').strip(' ')
-            for body_line in commit_body
+            for body_line in commit.body
             if body_line.startswith(TRAILER_KEY_SIGNED_OFF_BY)
         ]
 
         # Check that there is at least one sign off right away
         if len(sign_offs) == 0:
-            infractions[commit_sha].append('no sign offs found')
+            infractions[commit.hash].append('no sign offs found')
             continue
 
         # Extract sign off information
@@ -312,14 +395,14 @@ def main() -> int:
             name, email = extract_name_and_email(sign_off)
             verbose_print('name, email:', name, email)
             if not is_valid_email(email):
-                infractions[commit_sha].append(f'invalid email: {email}')
+                infractions[commit.hash].append(f'invalid email: {email}')
             else:
                 sign_offs_name_email.append((name, email))
         
         # Check that author is in the sign offs
-        if not author_result in sign_offs_name_email:
-            infractions[commit_sha].append(
-                f'sign off not found for commit author: {commit_author_data} (found: {sign_offs})')
+        if not (commit.author_name, commit.author_email) in sign_offs_name_email:
+            infractions[commit.hash].append(
+                f'sign off not found for commit author: {(commit.author_name, commit.author_email)} (found: {sign_offs})')
 
     # Check failed if there are any infractions
     if len(infractions) > 0:
@@ -329,7 +412,7 @@ def main() -> int:
             for commit_infraction in commit_infractions:
                 print(f'\t{commit_infraction}')
         return 1
-    if len(individual_commits) == 0:
+    if len(commits) == 0:
         print('warning: no commits were actually checked')
     print('Good')
     return 0
