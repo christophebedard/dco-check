@@ -475,14 +475,15 @@ def main() -> int:
     # Process them
     infractions: Dict[str, List[str]] = defaultdict(list)
     for commit in commits:
-        verbose_print('commit hash:', commit.hash)
-        verbose_print('commit author:', commit.author_name, commit.author_email)
-        verbose_print('commit body:', commit.body)
-
         # Skip this commit if it is a merge commit and the
         # option for checking merge commits is not enabled
         if commit.is_merge_commit and not check_merge_commits:
+            verbose_print('ignoring merge commit:', commit.hash)
             continue
+
+        verbose_print('commit hash:', commit.hash)
+        verbose_print('commit author:', commit.author_name, commit.author_email)
+        verbose_print('commit body:', commit.body)
 
         # Check author name and email
         if any(d is None for d in [commit.author_name, commit.author_email]):
