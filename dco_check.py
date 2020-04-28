@@ -127,6 +127,28 @@ def get_common_ancestor_commit_hash(
     return run(command)
 
 
+def fetch_branch(
+    branch: str,
+    remote: str = 'origin',
+) -> int:
+    """
+    Fetch branch from remote.
+
+    See: git fetch
+
+    :param branch: the name of the branch
+    :param remote: the name of the remote
+    :return: zero for success, nonzero otherwise
+    """
+    command = [
+        'git',
+        'fetch',
+        remote,
+        branch,
+    ]
+    return 0 if run(command) is not None else 1
+
+
 def get_commits_data(
     base: str,
     head: str,
@@ -312,6 +334,8 @@ class GitRetriever(CommitDataRetriever):
 
 class GitlabRetriever(CommitDataRetriever):
 
+    DEFAULT_REMOTE = 'origin'
+
     def name(self) -> str:
         return 'GitLab'
 
@@ -337,7 +361,9 @@ class GitlabRetriever(CommitDataRetriever):
         else:
             # Otherwise test all commits off of the default branch
             verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
-            commit_hash_base = get_common_ancestor_commit_hash(default_branch)
+            # Use remote default branch ref
+            remote_branch_ref = self.DEFAULT_REMOTE + '/' + default_branch
+            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
