@@ -132,6 +132,7 @@ def get_commits_data(
     The output data contains data for individual commits, separated by special characters:
        * 1st line: full commit sha
        * 2nd line: author name and email
+       * 3rd line: commit title (subject)
        * subsequent lines: commit body (which excludes the commit title line)
        * record separator (0x1e)
 
@@ -143,7 +144,7 @@ def get_commits_data(
         'git',
         'log',
         f'{base}..{head}',
-        '--pretty=%H%n%an <%ae>%n%-b%x1e',
+        '--pretty=%H%n%an <%ae>%n%s%n%-b%x1e',
         '--no-merges',
     ]
     return run(command)
@@ -278,13 +279,14 @@ class GitRetriever(CommitDataRetriever):
         for commit_data in individual_commits:
             commit_lines = commit_data.split('\n')
             commit_hash = commit_lines[0]
-            commit_body = commit_lines[2:]
             commit_author_data = commit_lines[1]
+            commit_title = commit_lines[2]
+            commit_body = commit_lines[3:]
             author_result = extract_name_and_email(commit_author_data)
             author_name, author_email = None, None
             if author_result is not None:
                 author_name, author_email = author_result
-            commits.append(CommitInfo(commit_hash, '', commit_body, author_name, author_email))
+            commits.append(CommitInfo(commit_hash, commit_title, commit_body, author_name, author_email))
         return commits
 
 
