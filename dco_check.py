@@ -369,7 +369,16 @@ class GitHubRetriever(CommitDataRetriever):
             commit_hash_head = self.event_payload['pull_request']['head']['sha']
         elif event_name == 'push':
             # See: https://developer.github.com/v3/activity/events/types/#pushevent
-            commit_hash_base = self.event_payload['before']
+            created = self.event_payload['created']
+            if created:
+                # If the branch was just created, there won't be a 'before' commit,
+                # therefore just get the first commit in the new branch and append '^'
+                # to get the commit before that one
+                commits = self.event_payload['commits']
+                # TODO check len(commits), it's probably 0 when pushing a new branch that is based on an existing one
+                commit_hash_base = commits[0]['id'] + '^'
+            else:
+                commit_hash_base = self.event_payload['before']
             commit_hash_head = self.event_payload['head_commit']['id']
         else:
             print('Unknown workflow event:', event_name)
