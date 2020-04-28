@@ -218,7 +218,7 @@ class CommitInfo:
         self,
         hash: str,
         title: str,
-        body: str,
+        body: List[str],
         author_name: str,
         author_email: str,
     ) -> None:
@@ -227,6 +227,9 @@ class CommitInfo:
         self.body = body
         self.author_name = author_name
         self.author_email = author_email
+
+    def __repr__(self) -> str:
+        return f'hash: {self.hash}\ntitle: {self.title}\nbody: {self.body}\nauthor: {self.author_name} <{self.author_email}>'
 
 
 class CommitDataRetriever:
@@ -358,7 +361,7 @@ def main() -> int:
 
     # Get commits
     commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head)
-    verbose_print('commits:', commits)
+    verbose_print('commits:', ('\n' + commits.__repr__()).replace('\n', '\n\t'))
     if commits is None:
         return 1
 
