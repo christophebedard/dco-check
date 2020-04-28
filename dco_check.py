@@ -361,6 +361,10 @@ class GitlabRetriever(CommitDataRetriever):
         else:
             # Otherwise test all commits off of the default branch
             verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+            # Fetch default branch
+            if 0 != fetch_branch(default_branch, self.DEFAULT_REMOTE):
+                print(f'failed to fetch \'{default_branch}\' from remote \'{self.DEFAULT_REMOTE}\'')
+                return None
             # Use remote default branch ref
             remote_branch_ref = self.DEFAULT_REMOTE + '/' + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
