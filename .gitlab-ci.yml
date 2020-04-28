@@ -3,6 +3,10 @@ variables:
 
 dco_check:
   image: python:3
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_EXTERNAL_PULL_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == 'master'
   script:
     - git fetch origin master
     - python3 dco_check.py --verbose
