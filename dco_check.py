@@ -370,7 +370,7 @@ class GitHubRetriever(CommitDataRetriever):
         elif event_name == 'push':
             # See: https://developer.github.com/v3/activity/events/types/#pushevent
             commit_hash_base = self.event_payload['before']
-            commit_hash_head = self.event_payload['head']
+            commit_hash_head = self.event_payload['head_commit']['id']
         else:
             print('Unknown workflow event:', event_name)
             return None
