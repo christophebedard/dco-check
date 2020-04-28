@@ -42,6 +42,12 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help='verbose mode (print out more information)',
     )
+    parser.add_argument(
+        '-m', '--check-merge-commits',
+        action='store_true',
+        default=False,
+        help='check sign-offs on merge commits as well',
+    )
     return parser.parse_args()
 
 
@@ -124,6 +130,7 @@ def get_common_ancestor_commit_hash(
 def get_commits_data(
     base: str,
     head: str,
+    ignore_merge_commits: bool = True,
 ) -> Optional[str]:
     """
     Get data (full sha & commit body) for commits in a range.
@@ -138,6 +145,7 @@ def get_commits_data(
 
     :param base: the sha of the commit just before the start of the range
     :param head: the sha of the last commit of the range
+    :param ignore_merge_commits: whether to ignore merge commits
     :return: the data, or `None` if it failed
     """
     command = [
@@ -145,8 +153,9 @@ def get_commits_data(
         'log',
         f'{base}..{head}',
         '--pretty=%H%n%an <%ae>%n%s%n%-b%x1e',
-        '--no-merges',
     ]
+    if ignore_merge_commits:
+        command.append('--no-merges')
     return run(command)
 
 
@@ -221,15 +230,20 @@ class CommitInfo:
         body: List[str],
         author_name: str,
         author_email: str,
+        is_merge_commit: bool = False,
     ) -> None:
         self.hash = hash
         self.title = title
         self.body = body
         self.author_name = author_name
         self.author_email = author_email
+        self.is_merge_commit = is_merge_commit
 
     def __repr__(self) -> str:
-        return f'hash: {self.hash}\ntitle: {self.title}\nbody: {self.body}\nauthor: {self.author_name} <{self.author_email}>'
+        s = f'hash: {self.hash}\ntitle: {self.title}\nbody: {self.body}\nauthor: {self.author_name} <{self.author_email}>'
+        if self.is_merge_commit:
+            s += '\n(merge commit)'
+        return s
 
 
 class CommitDataRetriever:
@@ -252,7 +266,7 @@ class CommitDataRetriever:
         """
         raise NotImplementedError
 
-    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
+    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
         """Get commit data."""
         raise NotImplementedError
 
@@ -275,8 +289,9 @@ class GitRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
-        commits_data = get_commits_data(base, head)
+    def get_commits(self, base: str, head: str, check_merge_commits: bool = False, **kwargs) -> Optional[List[CommitInfo]]:
+        ignore_merge_commits = not check_merge_commits
+        commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
         individual_commits = split_commits_data(commits_data)
         commits = []
         for commit_data in individual_commits:
@@ -289,7 +304,9 @@ class GitRetriever(CommitDataRetriever):
             author_name, author_email = None, None
             if author_result is not None:
                 author_name, author_email = author_result
-            commits.append(CommitInfo(commit_hash, commit_title, commit_body, author_name, author_email))
+            # There won't be any merge commits at this point
+            is_merge_commit = False
+            commits.append(CommitInfo(commit_hash, commit_title, commit_body, author_name, author_email, is_merge_commit))
         return commits
 
 
@@ -325,8 +342,8 @@ class GitlabRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
-        return GitRetriever().get_commits(base, head)
+    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
+        return GitRetriever().get_commits(base, head, **kwargs)
 
 
 import http.client
@@ -385,7 +402,7 @@ class GitHubRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
+    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
         # Request commit data
         compare_url_template = self.event_payload['repository']['compare_url']
         compare_url = compare_url_template.format(base=base, head=head)
@@ -413,7 +430,8 @@ class GitHubRetriever(CommitDataRetriever):
             commit_body = message[1:]
             author_name = commit['commit']['author']['name']
             author_email = commit['commit']['author']['email']
-            commits.append(CommitInfo(commit_hash, commit_title, commit_body, author_name, author_email))
+            is_merge_commit = len(commit['parents']) > 1
+            commits.append(CommitInfo(commit_hash, commit_title, commit_body, author_name, author_email, is_merge_commit))
         return commits
 
 
@@ -429,6 +447,7 @@ def main() -> int:
     args = parse_args()
     global verbose
     verbose = args.verbose
+    check_merge_commits = args.check_merge_commits
 
     # Detect CI
     # Use first one that applies
@@ -448,7 +467,7 @@ def main() -> int:
     verbose_print(f'commit range: {commit_hash_base}..{commit_hash_head}')
 
     # Get commits
-    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head)
+    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
     if commits is None:
         return 1
     verbose_print('commits:', ('\n' + commits.__repr__()).replace('\n', '\n\t'))
@@ -459,6 +478,11 @@ def main() -> int:
         verbose_print('commit hash:', commit.hash)
         verbose_print('commit author:', commit.author_name, commit.author_email)
         verbose_print('commit body:', commit.body)
+
+        # Skip this commit if it is a merge commit and the
+        # option for checking merge commits is not enabled
+        if commit.is_merge_commit and not check_merge_commits:
+            continue
 
         # Check author name and email
         if any(d is None for d in [commit.author_name, commit.author_email]):
