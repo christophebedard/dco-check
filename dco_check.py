@@ -326,7 +326,7 @@ class GitlabRetriever(CommitDataRetriever):
             return commit_hash_base, commit_hash_head
 
     def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
-        pass
+        return GitRetriever().get_commits(base, head)
 
 
 # TODO find a better way to do this
