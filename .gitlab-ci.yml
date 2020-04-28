@@ -8,5 +8,4 @@ dco_check:
     - if: $CI_EXTERNAL_PULL_REQUEST_IID
     - if: $CI_COMMIT_BRANCH == 'master'
   script:
-    - git fetch origin master
     - python3 dco_check.py --verbose
