@@ -376,6 +376,45 @@ class GitlabRetriever(CommitDataRetriever):
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
+class CircleRetriever(CommitDataRetriever):
+
+    DEFAULT_REMOTE = 'origin'
+
+    def name(self) -> str:
+        return 'CircleCI'
+
+    def applies(self) -> bool:
+        return get_env_var('CIRCLECI', print_if_not_found=False) is not None
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:
+        # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
+        # TODO replace
+        default_branch = DEFAULT_DEFAULT_BRANCH
+
+        commit_hash_head = get_env_var('CIRCLE_SHA1')
+        if commit_hash_head is None:
+            return None
+
+        # TODO support testing only new commits on the default branch
+        current_branch = get_env_var('CIRCLE_BRANCH')
+
+        # Test all commits off of the default branch
+        verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+        # Fetch default branch
+        if 0 != fetch_branch(default_branch, self.DEFAULT_REMOTE):
+            print(f'failed to fetch \'{default_branch}\' from remote \'{self.DEFAULT_REMOTE}\'')
+            return None
+        # Use remote default branch ref
+        remote_branch_ref = self.DEFAULT_REMOTE + '/' + default_branch
+        commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+        if commit_hash_base is None:
+            return None
+        return commit_hash_base, commit_hash_head
+
+    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
+        return GitRetriever().get_commits(base, head, **kwargs)
+
+
 import http.client
 import json
 from pprint import pprint
@@ -482,7 +521,7 @@ def main() -> int:
     # Detect CI
     # Use first one that applies
     commit_retriever = None
-    for retriever_cls in [GitlabRetriever, GitHubRetriever, GitRetriever]:
+    for retriever_cls in [GitlabRetriever, GitHubRetriever, CircleRetriever, GitRetriever]:
         retriever = retriever_cls()
         if retriever.applies():
             commit_retriever = retriever
