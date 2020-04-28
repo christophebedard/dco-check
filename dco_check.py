@@ -329,6 +329,69 @@ class GitlabRetriever(CommitDataRetriever):
         return GitRetriever().get_commits(base, head)
 
 
+import http.client
+import json
+from pprint import pprint
+class GitHubRetriever(CommitDataRetriever):
+
+    def name(self) -> str:
+        return 'GitHub CI'
+
+    def applies(self) -> bool:
+        return get_env_var('GITHUB_ACTIONS', print_if_not_found=False) == 'true'
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:
+        # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+        verbose_print('GITHUB_EVENT_NAME:', get_env_var('GITHUB_EVENT_NAME'))
+        # See: https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables
+        event_payload_path = get_env_var('GITHUB_EVENT_PATH')
+        if event_payload_path is None:
+            return None
+        self.github_token = get_env_var('GITHUB_TOKEN')
+        if self.github_token is None:
+            print('Did you forget to include this in your workflow config?')
+            print('\n\tenv:\n\t\tGITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}')
+            return None
+        f = open(event_payload_path)
+        self.event_payload = json.load(f)
+        f.close()
+        # See: https://developer.github.com/v3/activity/events/types/#pullrequestevent
+        commit_hash_base = self.event_payload['pull_request']['base']['sha']
+        commit_hash_head = self.event_payload['pull_request']['head']['sha']
+        return commit_hash_base, commit_hash_head
+
+    def get_commits(self, base: str, head: str) -> Optional[List[CommitInfo]]:
+        # Request commit data
+        compare_url_template = self.event_payload['repository']['compare_url']
+        compare_url = compare_url_template.format(base=base, head=head)
+        connection = http.client.HTTPSConnection('api.github.com')
+        headers = {
+            'User-Agent': 'dco_check',
+            'Authorization': 'token ' + self.github_token,
+        }
+        connection.request('GET', compare_url, headers=headers)
+        response = connection.getresponse()
+        if 200 != response.getcode():
+            print('Request failed: compare_url')
+            print('reponse:', pprint(response.read().decode()))
+            return None
+        response_json = json.load(response)
+        verbose_print('reponse:', pprint(response_json))
+
+        # Extract data
+        commits = []
+        for commit in response_json['commits']:
+            commit_hash = commit['sha']
+            message = commit['commit']['message'].split('\n')
+            message = list(filter(None, message))
+            commit_title = message[0]
+            commit_body = message[1:]
+            author_name = commit['commit']['author']['name']
+            author_email = commit['commit']['author']['email']
+            commits.append(CommitInfo(commit_hash, commit_title, commit_body, author_name, author_email))
+        return commits
+
+
 # TODO find a better way to do this
 verbose = False
 def verbose_print(msg, *args, **kwargs) -> None:
@@ -345,7 +408,7 @@ def main() -> int:
     # Detect CI
     # Use first one that applies
     commit_retriever = None
-    for retriever_cls in [GitlabRetriever, GitRetriever]:
+    for retriever_cls in [GitlabRetriever, GitHubRetriever, GitRetriever]:
         retriever = retriever_cls()
         if retriever.applies():
             commit_retriever = retriever
@@ -361,9 +424,9 @@ def main() -> int:
 
     # Get commits
     commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head)
-    verbose_print('commits:', ('\n' + commits.__repr__()).replace('\n', '\n\t'))
     if commits is None:
         return 1
+    verbose_print('commits:', ('\n' + commits.__repr__()).replace('\n', '\n\t'))
 
     # Process them
     infractions: Dict[str, List[str]] = defaultdict(list)
