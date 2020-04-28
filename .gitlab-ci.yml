@@ -4,4 +4,5 @@ variables:
 dco_check:
   image: python:3
   script:
+    - git fetch origin master
     - python3 dco_check.py --verbose
