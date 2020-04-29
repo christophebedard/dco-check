@@ -555,36 +555,10 @@ def verbose_print(msg = '', *args, **kwargs) -> None:
         print(msg, *args, **kwargs)
 
 
-def main() -> int:
-    args = parse_args()
-    global verbose
-    verbose = args.verbose
-    check_merge_commits = args.check_merge_commits
-
-    # Detect CI
-    # Use first one that applies
-    retrievers = [GitlabRetriever, GitHubRetriever, AzurePipelinesRetriever, CircleRetriever, GitRetriever]
-    commit_retriever = None
-    for retriever_cls in retrievers:
-        retriever = retriever_cls()
-        if retriever.applies():
-            commit_retriever = retriever
-            break
-    print('detected:', commit_retriever.name())
-
-    # Get range of commits
-    commit_range = commit_retriever.get_commit_range()
-    if commit_range is None:
-        return 1
-    commit_hash_base, commit_hash_head = commit_range
-    verbose_print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
-
-    # Get commits
-    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
-    if commits is None:
-        return 1
-
-    # Process them
+def process_commits(
+    commits: List[CommitInfo],
+    check_merge_commits: bool,
+) -> Dict[str, List[str]]:
     infractions: Dict[str, List[str]] = defaultdict(list)
     for commit in commits:
         # Skip this commit if it is a merge commit and the
@@ -631,6 +605,41 @@ def main() -> int:
 
         # Separator between commits
         verbose_print()
+
+    return infractions
+
+
+def main() -> int:
+    args = parse_args()
+    global verbose
+    verbose = args.verbose
+    check_merge_commits = args.check_merge_commits
+
+    # Detect CI
+    # Use first one that applies
+    retrievers = [GitlabRetriever, GitHubRetriever, AzurePipelinesRetriever, CircleRetriever, GitRetriever]
+    commit_retriever = None
+    for retriever_cls in retrievers:
+        retriever = retriever_cls()
+        if retriever.applies():
+            commit_retriever = retriever
+            break
+    print('detected:', commit_retriever.name())
+
+    # Get range of commits
+    commit_range = commit_retriever.get_commit_range()
+    if commit_range is None:
+        return 1
+    commit_hash_base, commit_hash_head = commit_range
+    verbose_print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
+
+    # Get commits
+    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
+    if commits is None:
+        return 1
+
+    # Process them
+    infractions = process_commits(commits, check_merge_commits)
 
     # Check failed if there are any infractions
     if len(infractions) > 0:
