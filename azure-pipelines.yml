@@ -1,0 +1,42 @@
+trigger:
+- master
+
+jobs:
+- job: Linux
+  pool:
+    vmImage: 'ubuntu-latest'
+  strategy:
+    matrix:
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+      Python38:
+        python.version: '3.8'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+    displayName: 'Use Python $(python.version)'
+  - script: |
+      python dco_check.py --verbose
+    displayName: 'Check DCO'
+- job: Windows
+  pool:
+    vmImage: 'windows-latest'
+  strategy:
+    matrix:
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+      Python38:
+        python.version: '3.8'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+    displayName: 'Use Python $(python.version)'
+  - script: |
+      python dco_check.py --verbose
+    displayName: 'Check DCO'
