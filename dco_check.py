@@ -559,6 +559,13 @@ def process_commits(
     commits: List[CommitInfo],
     check_merge_commits: bool,
 ) -> Dict[str, List[str]]:
+    """
+    Process commit information to detect DCO infractions.
+
+    :param commits: the list of commit info
+    :param check_merge_commits: true to check merge commits, false otherwise
+    :return: the infractions as a dict {commit sha, infraction explanation}
+    """
     infractions: Dict[str, List[str]] = defaultdict(list)
     for commit in commits:
         # Skip this commit if it is a merge commit and the
@@ -569,6 +576,7 @@ def process_commits(
 
         verbose_print('\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else ''))
         verbose_print('\t' + commit.author_name, commit.author_email)
+        verbose_print('\t' + commit.title)
         verbose_print('\t' + '\n\t'.join(commit.body))
 
         # Check author name and email
@@ -583,16 +591,16 @@ def process_commits(
             if body_line.startswith(TRAILER_KEY_SIGNED_OFF_BY)
         ]
 
-        # Check that there is at least one sign off right away
+        # Check that there is at least one sign-off right away
         if len(sign_offs) == 0:
-            infractions[commit.hash].append('no sign offs found')
+            infractions[commit.hash].append('no sign-off found')
             continue
 
         # Extract sign off information
         sign_offs_name_email: List[Tuple[str, str]] = []
         for sign_off in sign_offs:
             name, email = extract_name_and_email(sign_off)
-            verbose_print('detected sign-off:', name, email)
+            verbose_print('\t\t' + 'found sign-off:', name, email)
             if not is_valid_email(email):
                 infractions[commit.hash].append(f'invalid email: {email}')
             else:
@@ -607,6 +615,27 @@ def process_commits(
         verbose_print()
 
     return infractions
+
+
+def check_infractions(
+    infractions: Dict[str, List[str]],
+) -> int:
+    """
+    Check infractions.
+
+    :param infractions: the infractions dict {commit sha, infraction explanation}
+    :return: 0 if no infractions, non-zero otherwise
+    """
+    if len(infractions) > 0:
+        print('Missing sign-off(s)')
+        print()
+        for commit_sha, commit_infractions in infractions.items():
+            print('\t' + commit_sha)
+            for commit_infraction in commit_infractions:
+                print('\t\t' + commit_infraction)
+        return 1
+    print('All good!')
+    return 0
 
 
 def main() -> int:
@@ -631,7 +660,9 @@ def main() -> int:
     if commit_range is None:
         return 1
     commit_hash_base, commit_hash_head = commit_range
+    verbose_print()
     verbose_print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
+    verbose_print()
 
     # Get commits
     commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
@@ -641,18 +672,13 @@ def main() -> int:
     # Process them
     infractions = process_commits(commits, check_merge_commits)
 
-    # Check failed if there are any infractions
-    if len(infractions) > 0:
-        print('Missing sign-off(s)')
-        for commit_sha, commit_infractions in infractions.items():
-            print(commit_sha)
-            for commit_infraction in commit_infractions:
-                print('\t' + commit_infraction)
-        return 1
+    # Check if there are any infractions
+    result = check_infractions(infractions)
+
     if len(commits) == 0:
         print('warning: no commits were actually checked')
-    print('All good!')
-    return 0
+
+    return result
 
 
 if __name__ == '__main__':
