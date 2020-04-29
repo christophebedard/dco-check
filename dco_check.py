@@ -609,7 +609,7 @@ def process_commits(
         # Check that author is in the sign offs
         if not (commit.author_name, commit.author_email) in sign_offs_name_email:
             infractions[commit.hash].append(
-                f'sign off not found for commit author: {(commit.author_name, commit.author_email)} (found: {sign_offs})')
+                f'sign-off not found for commit author: {commit.author_name} {commit.author_email}; found: {sign_offs}')
 
         # Separator between commits
         verbose_print()
@@ -660,7 +660,7 @@ def main() -> int:
     if commit_range is None:
         return 1
     commit_hash_base, commit_hash_head = commit_range
-    verbose_print()
+    print()
     verbose_print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
     verbose_print()
 
