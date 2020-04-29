@@ -16,6 +16,8 @@
 
 import argparse
 from collections import defaultdict
+import http.client
+import json
 import os
 import re
 import subprocess
@@ -28,8 +30,10 @@ from typing import Optional
 from typing import Tuple
 
 
+# TODO expose these two as parameters
+DEFAULT_BRANCH = 'master'
+DEFAULT_REMOTE = 'origin'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
-DEFAULT_DEFAULT_BRANCH = 'master'
 
 
 def parse_args() -> argparse.Namespace:
@@ -146,6 +150,7 @@ def fetch_branch(
         remote,
         branch,
     ]
+    # We don't want the output
     return 0 if run(command) is not None else 1
 
 
@@ -177,7 +182,7 @@ def get_commits_data(
         '--pretty=%H%n%an <%ae>%n%s%n%-b%x1e',
     ]
     if ignore_merge_commits:
-        command.append('--no-merges')
+        command += ['--no-merges']
     return run(command)
 
 
@@ -244,6 +249,7 @@ def get_env_var(
 
 
 class CommitInfo:
+    """Container for all necessary commit information."""
 
     def __init__(
         self,
@@ -269,6 +275,13 @@ class CommitInfo:
 
 
 class CommitDataRetriever:
+    """
+    Abstract commit data retriever.
+
+    It first provides a method to check whether it applies to the current setup or not.
+    It also provides other methods to get commits to be checked.
+    These should not be called if it doesn't apply.
+    """
 
     def name(self) -> str:
         """Get a name that represents this retriever."""
@@ -303,7 +316,7 @@ class GitRetriever(CommitDataRetriever):
         return True
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        commit_hash_base = get_common_ancestor_commit_hash(DEFAULT_DEFAULT_BRANCH)
+        commit_hash_base = get_common_ancestor_commit_hash(DEFAULT_BRANCH)
         if commit_hash_base is None:
             return None
         commit_hash_head = get_head_commit_hash()
@@ -334,8 +347,6 @@ class GitRetriever(CommitDataRetriever):
 
 class GitlabRetriever(CommitDataRetriever):
 
-    DEFAULT_REMOTE = 'origin'
-
     def name(self) -> str:
         return 'GitLab'
 
@@ -344,7 +355,7 @@ class GitlabRetriever(CommitDataRetriever):
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=DEFAULT_DEFAULT_BRANCH)
+        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=DEFAULT_BRANCH)
 
         commit_hash_head = get_env_var('CI_COMMIT_SHA')
         if commit_hash_head is None:
@@ -362,11 +373,11 @@ class GitlabRetriever(CommitDataRetriever):
             # Otherwise test all commits off of the default branch
             verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             # Fetch default branch
-            if 0 != fetch_branch(default_branch, self.DEFAULT_REMOTE):
-                print(f'failed to fetch \'{default_branch}\' from remote \'{self.DEFAULT_REMOTE}\'')
+            if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
+                print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
                 return None
             # Use remote default branch ref
-            remote_branch_ref = self.DEFAULT_REMOTE + '/' + default_branch
+            remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
             if commit_hash_base is None:
                 return None
@@ -378,8 +389,6 @@ class GitlabRetriever(CommitDataRetriever):
 
 class CircleRetriever(CommitDataRetriever):
 
-    DEFAULT_REMOTE = 'origin'
-
     def name(self) -> str:
         return 'CircleCI'
 
@@ -389,7 +398,7 @@ class CircleRetriever(CommitDataRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
         # TODO replace
-        default_branch = DEFAULT_DEFAULT_BRANCH
+        default_branch = DEFAULT_BRANCH
 
         commit_hash_head = get_env_var('CIRCLE_SHA1')
         if commit_hash_head is None:
@@ -401,11 +410,11 @@ class CircleRetriever(CommitDataRetriever):
         # Test all commits off of the default branch
         verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
-        if 0 != fetch_branch(default_branch, self.DEFAULT_REMOTE):
-            print(f'failed to fetch \'{default_branch}\' from remote \'{self.DEFAULT_REMOTE}\'')
+        if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
+            print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
             return None
         # Use remote default branch ref
-        remote_branch_ref = self.DEFAULT_REMOTE + '/' + default_branch
+        remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
         commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
         if commit_hash_base is None:
             return None
@@ -417,8 +426,6 @@ class CircleRetriever(CommitDataRetriever):
 
 class AzurePipelinesRetriever(CommitDataRetriever):
 
-    DEFAULT_REMOTE = 'origin'
-
     def name(self) -> str:
         return 'Azure Pipelines'
 
@@ -428,7 +435,7 @@ class AzurePipelinesRetriever(CommitDataRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables
         # TODO replace
-        default_branch = DEFAULT_DEFAULT_BRANCH
+        default_branch = DEFAULT_BRANCH
 
         commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
         if commit_hash_head is None:
@@ -440,11 +447,11 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         # Test all commits off of the default branch
         verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
-        if 0 != fetch_branch(default_branch, self.DEFAULT_REMOTE):
-            print(f'failed to fetch \'{default_branch}\' from remote \'{self.DEFAULT_REMOTE}\'')
+        if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
+            print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
             return None
         # Use remote default branch ref
-        remote_branch_ref = self.DEFAULT_REMOTE + '/' + default_branch
+        remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
         commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
         if commit_hash_base is None:
             return None
@@ -454,9 +461,6 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
-import http.client
-import json
-from pprint import pprint
 class GitHubRetriever(CommitDataRetriever):
 
     def name(self) -> str:
@@ -522,13 +526,13 @@ class GitHubRetriever(CommitDataRetriever):
         connection.request('GET', compare_url, headers=headers)
         response = connection.getresponse()
         if 200 != response.getcode():
+            from pprint import pprint
             print('Request failed: compare_url')
             print('reponse:', pprint(response.read().decode()))
             return None
-        response_json = json.load(response)
-        verbose_print('reponse:', pprint(response_json))
 
         # Extract data
+        response_json = json.load(response)
         commits = []
         for commit in response_json['commits']:
             commit_hash = commit['sha']
@@ -545,7 +549,7 @@ class GitHubRetriever(CommitDataRetriever):
 
 # TODO find a better way to do this
 verbose = False
-def verbose_print(msg, *args, **kwargs) -> None:
+def verbose_print(msg = '', *args, **kwargs) -> None:
     global verbose
     if verbose:
         print(msg, *args, **kwargs)
@@ -559,8 +563,9 @@ def main() -> int:
 
     # Detect CI
     # Use first one that applies
+    retrievers = [GitlabRetriever, GitHubRetriever, AzurePipelinesRetriever, CircleRetriever, GitRetriever]
     commit_retriever = None
-    for retriever_cls in [GitlabRetriever, GitHubRetriever, AzurePipelinesRetriever, CircleRetriever, GitRetriever]:
+    for retriever_cls in retrievers:
         retriever = retriever_cls()
         if retriever.applies():
             commit_retriever = retriever
@@ -572,13 +577,12 @@ def main() -> int:
     if commit_range is None:
         return 1
     commit_hash_base, commit_hash_head = commit_range
-    verbose_print(f'commit range: {commit_hash_base}..{commit_hash_head}')
+    verbose_print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
 
     # Get commits
     commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
     if commits is None:
         return 1
-    verbose_print('commits:', ('\n' + commits.__repr__()).replace('\n', '\n\t'))
 
     # Process them
     infractions: Dict[str, List[str]] = defaultdict(list)
@@ -589,9 +593,9 @@ def main() -> int:
             verbose_print('ignoring merge commit:', commit.hash)
             continue
 
-        verbose_print('commit hash:', commit.hash)
-        verbose_print('commit author:', commit.author_name, commit.author_email)
-        verbose_print('commit body:', commit.body)
+        verbose_print('\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else ''))
+        verbose_print('\t' + commit.author_name, commit.author_email)
+        verbose_print('\t' + '\n\t'.join(commit.body))
 
         # Check author name and email
         if any(d is None for d in [commit.author_name, commit.author_email]):
@@ -614,7 +618,7 @@ def main() -> int:
         sign_offs_name_email: List[Tuple[str, str]] = []
         for sign_off in sign_offs:
             name, email = extract_name_and_email(sign_off)
-            verbose_print('name, email:', name, email)
+            verbose_print('detected sign-off:', name, email)
             if not is_valid_email(email):
                 infractions[commit.hash].append(f'invalid email: {email}')
             else:
@@ -625,17 +629,20 @@ def main() -> int:
             infractions[commit.hash].append(
                 f'sign off not found for commit author: {(commit.author_name, commit.author_email)} (found: {sign_offs})')
 
+        # Separator between commits
+        verbose_print()
+
     # Check failed if there are any infractions
     if len(infractions) > 0:
-        print('INFRACTIONS')
+        print('Missing sign-off(s)')
         for commit_sha, commit_infractions in infractions.items():
-            print(f'commit {commit_sha}:')
+            print(commit_sha)
             for commit_infraction in commit_infractions:
-                print(f'\t{commit_infraction}')
+                print('\t' + commit_infraction)
         return 1
     if len(commits) == 0:
         print('warning: no commits were actually checked')
-    print('Good')
+    print('All good!')
     return 0
 
 
