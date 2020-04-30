@@ -461,6 +461,49 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
+class AppVeyorRetriever(CommitDataRetriever):
+
+    def name(self) -> str:
+        return 'AppVeyor'
+
+    def applies(self) -> bool:
+        return get_env_var('APPVEYOR', print_if_not_found=False) is not None
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:
+        # See: https://www.appveyor.com/docs/environment-variables/
+        # TODO review this
+        default_branch = DEFAULT_BRANCH
+
+        commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT')
+        if commit_hash_head is None:
+            commit_hash_head = get_head_commit_hash()
+
+        # If we're on the default branch, just test new commits
+        current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
+        if current_branch is not None and current_branch == default_branch:
+            verbose_print(f'on default branch \'{current_branch}\': will check new commits')
+            commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
+            if commit_hash_base is None:
+                return None
+            return commit_hash_base, commit_hash_head
+        else:
+            # Otherwise test all commits off of the default branch
+            verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+            # Fetch default branch
+            if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
+                print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+                return None
+            # Use remote default branch ref
+            remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
+            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+            if commit_hash_base is None:
+                return None
+            return commit_hash_base, commit_hash_head
+
+    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
+        return GitRetriever().get_commits(base, head, **kwargs)
+
+
 class GitHubRetriever(CommitDataRetriever):
 
     def name(self) -> str:
@@ -646,7 +689,7 @@ def main() -> int:
 
     # Detect CI
     # Use first one that applies
-    retrievers = [GitlabRetriever, GitHubRetriever, AzurePipelinesRetriever, CircleRetriever, GitRetriever]
+    retrievers = [GitlabRetriever, GitHubRetriever, AzurePipelinesRetriever, AppVeyorRetriever, CircleRetriever, GitRetriever]
     commit_retriever = None
     for retriever_cls in retrievers:
         retriever = retriever_cls()
