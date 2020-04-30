@@ -1,5 +1,9 @@
 version: '{build}'
 
+branches:
+  only:
+    - master
+
 environment:
   matrix:
     - PYTHON: "C:\\Python36-x64"
