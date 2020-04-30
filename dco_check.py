@@ -41,16 +41,23 @@ def parse_args() -> argparse.Namespace:
         description='Check that all commits of a proposed change have a DCO, i.e. are signed-off.',
     )
     parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        default=False,
-        help='verbose mode (print out more information)',
-    )
-    parser.add_argument(
         '-m', '--check-merge-commits',
         action='store_true',
         default=False,
         help='check sign-offs on merge commits as well',
+    )
+    output_options_group = parser.add_mutually_exclusive_group()
+    output_options_group.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        default=False,
+        help='quiet mode (do not print anything; simply exit with 0 or non-zero)',
+    )
+    output_options_group.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        default=False,
+        help='verbose mode (print out more information)',
     )
     return parser.parse_args()
 
@@ -682,10 +689,11 @@ def check_infractions(
 
 
 def main() -> int:
-    args = parse_args()
     global verbose
-    verbose = args.verbose
+    args = parse_args()
     check_merge_commits = args.check_merge_commits
+    quiet = args.quiet
+    verbose = args.verbose
 
     # Detect CI
     # Use first one that applies
