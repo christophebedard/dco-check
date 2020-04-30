@@ -1,0 +1,15 @@
+version: '{build}'
+
+branches:
+  only:
+    - master
+
+environment:
+  matrix:
+    - PYTHON: "C:\\Python36-x64"
+    - PYTHON: "C:\\Python37-x64"
+    - PYTHON: "C:\\Python38-x64"
+
+build: off
+test_script:
+  - "%PYTHON%\\python.exe dco_check.py --verbose"
