@@ -38,7 +38,7 @@ TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description='Check that all commits of a proposed change have a DCO (i.e. are signed-off)',
+        description='Check that all commits of a proposed change have a DCO, i.e. are signed-off.',
     )
     parser.add_argument(
         '-v', '--verbose',
