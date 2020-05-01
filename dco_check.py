@@ -38,13 +38,7 @@ TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description='Check that all commits of a proposed change have a DCO (i.e. are signed-off)',
-    )
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        default=False,
-        help='verbose mode (print out more information)',
+        description='Check that all commits of a proposed change have a DCO, i.e. are signed-off.',
     )
     parser.add_argument(
         '-m', '--check-merge-commits',
@@ -52,7 +46,37 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help='check sign-offs on merge commits as well',
     )
+    output_options_group = parser.add_mutually_exclusive_group()
+    output_options_group.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        default=False,
+        help='quiet mode (do not print anything; simply exit with 0 or non-zero)',
+    )
+    output_options_group.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        default=False,
+        help='verbose mode (print out more information)',
+    )
     return parser.parse_args()
+
+
+class Logger:
+    """Simple logger to stdout which can be quiet or verbose."""
+
+    def __init__(self) -> None:
+        self.quiet = False
+        self.verbose = False
+
+    def print(self, msg = '', *args, **kwargs) -> None:
+        if not self.quiet:
+            print(msg, *args, **kwargs)
+
+    def verbose_print(self, msg = '', *args, **kwargs) -> None:
+        if self.verbose:
+            print(msg, *args, **kwargs)
+logger = Logger()
 
 
 def run(
@@ -73,11 +97,11 @@ def run(
         )
         output_stdout, _ = process.communicate()
         if process.returncode != 0:
-            print(f'error: {output_stdout.decode("utf8")}')
+            logger.print(f'error: {output_stdout.decode("utf8")}')
         else:
             output = output_stdout.rstrip().decode('utf8').strip('\n')
     except subprocess.CalledProcessError as e:
-        print(f'error: {e.output.decode("utf8")}')
+        logger.print(f'error: {e.output.decode("utf8")}')
     return output
 
 
@@ -241,10 +265,10 @@ def get_env_var(
     if value is None:
         if default is not None:
             if print_if_not_found:
-                print(f'could not get environment variable: \'{env_var}\'; using value default value: \'{default}\'')
+                logger.print(f'could not get environment variable: \'{env_var}\'; using value default value: \'{default}\'')
             value = default
         elif print_if_not_found:
-            print(f'could not get environment variable: \'{env_var}\'')
+            logger.print(f'could not get environment variable: \'{env_var}\'')
     return value
 
 
@@ -309,7 +333,7 @@ class CommitDataRetriever:
 class GitRetriever(CommitDataRetriever):
 
     def name(self) -> str:
-        return 'Git (default)'
+        return 'git (default)'
 
     def applies(self) -> bool:
         # Unless we only have access to a partial commit history
@@ -364,17 +388,17 @@ class GitlabRetriever(CommitDataRetriever):
         # If we're on the default branch, just test new commits
         current_branch = get_env_var('CI_COMMIT_BRANCH')
         if current_branch is not None and current_branch == default_branch:
-            verbose_print(f'on default branch \'{current_branch}\': will check new commits')
+            logger.verbose_print(f'\ton default branch \'{current_branch}\': will check new commits')
             commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
-            verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+            logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             # Fetch default branch
             if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-                print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+                logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
                 return None
             # Use remote default branch ref
             remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
@@ -408,10 +432,10 @@ class CircleRetriever(CommitDataRetriever):
         current_branch = get_env_var('CIRCLE_BRANCH')
 
         # Test all commits off of the default branch
-        verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+        logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
         if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-            print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+            logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
             return None
         # Use remote default branch ref
         remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
@@ -445,10 +469,10 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
 
         # Test all commits off of the default branch
-        verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+        logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
         if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-            print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+            logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
             return None
         # Use remote default branch ref
         remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
@@ -481,17 +505,17 @@ class AppVeyorRetriever(CommitDataRetriever):
         # If we're on the default branch, just test new commits
         current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
         if current_branch is not None and current_branch == default_branch:
-            verbose_print(f'on default branch \'{current_branch}\': will check new commits')
+            logger.verbose_print(f'\ton default branch \'{current_branch}\': will check new commits')
             commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
-            verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+            logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             # Fetch default branch
             if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-                print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+                logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
                 return None
             # Use remote default branch ref
             remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
@@ -516,8 +540,8 @@ class GitHubRetriever(CommitDataRetriever):
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         self.github_token = get_env_var('GITHUB_TOKEN')
         if self.github_token is None:
-            print('Did you forget to include this in your workflow config?')
-            print('\n\tenv:\n\t\tGITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}')
+            logger.print('Did you forget to include this in your workflow config?')
+            logger.print('\n\tenv:\n\t\tGITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}')
             return None
 
         # See: https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables
@@ -532,13 +556,15 @@ class GitHubRetriever(CommitDataRetriever):
         event_name = get_env_var('GITHUB_EVENT_NAME')
         if event_name is None:
             return None
-        verbose_print('workflow event type:', event_name)
         commit_hash_base = None
         commit_hash_head = None
         if event_name == 'pull_request':
             # See: https://developer.github.com/v3/activity/events/types/#pullrequestevent
             commit_hash_base = self.event_payload['pull_request']['base']['sha']
             commit_hash_head = self.event_payload['pull_request']['head']['sha']
+            commit_branch_base = self.event_payload['pull_request']['base']['ref']
+            commit_branch_head = self.event_payload['pull_request']['head']['ref']
+            logger.verbose_print(f'\ton pull request branch \'{commit_branch_head}\': will check commits off of base branch \'{commit_branch_base}\'')
         elif event_name == 'push':
             # See: https://developer.github.com/v3/activity/events/types/#pushevent
             created = self.event_payload['created']
@@ -553,7 +579,7 @@ class GitHubRetriever(CommitDataRetriever):
                 commit_hash_base = self.event_payload['before']
             commit_hash_head = self.event_payload['head_commit']['id']
         else:
-            print('Unknown workflow event:', event_name)
+            logger.print('Unknown workflow event:', event_name)
             return None
         return commit_hash_base, commit_hash_head
 
@@ -570,8 +596,8 @@ class GitHubRetriever(CommitDataRetriever):
         response = connection.getresponse()
         if 200 != response.getcode():
             from pprint import pprint
-            print('Request failed: compare_url')
-            print('reponse:', pprint(response.read().decode()))
+            logger.print('Request failed: compare_url')
+            logger.print('reponse:', pprint(response.read().decode()))
             return None
 
         # Extract data
@@ -590,14 +616,6 @@ class GitHubRetriever(CommitDataRetriever):
         return commits
 
 
-# TODO find a better way to do this
-verbose = False
-def verbose_print(msg = '', *args, **kwargs) -> None:
-    global verbose
-    if verbose:
-        print(msg, *args, **kwargs)
-
-
 def process_commits(
     commits: List[CommitInfo],
     check_merge_commits: bool,
@@ -614,20 +632,21 @@ def process_commits(
         # Skip this commit if it is a merge commit and the
         # option for checking merge commits is not enabled
         if commit.is_merge_commit and not check_merge_commits:
-            verbose_print('ignoring merge commit:', commit.hash)
+            logger.verbose_print('\t' + 'ignoring merge commit:', commit.hash)
+            logger.verbose_print()
             continue
 
-        verbose_print('\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else ''))
-        verbose_print('\t' + commit.author_name, commit.author_email)
-        verbose_print('\t' + commit.title)
-        verbose_print('\t' + '\n\t'.join(commit.body))
+        logger.verbose_print('\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else ''))
+        logger.verbose_print('\t' + commit.author_name, commit.author_email)
+        logger.verbose_print('\t' + commit.title)
+        logger.verbose_print('\t' + '\n\t'.join(commit.body))
 
         # Check author name and email
         if any(d is None for d in [commit.author_name, commit.author_email]):
             infractions[commit.hash].append(f'could not extract author data for commit: {commit.hash}')
             continue
 
-        # Extract sign off data
+        # Extract sign-off data
         sign_offs = [
             body_line.replace(TRAILER_KEY_SIGNED_OFF_BY, '').strip(' ')
             for body_line in commit.body
@@ -643,19 +662,19 @@ def process_commits(
         sign_offs_name_email: List[Tuple[str, str]] = []
         for sign_off in sign_offs:
             name, email = extract_name_and_email(sign_off)
-            verbose_print('\t\t' + 'found sign-off:', name, email)
+            logger.verbose_print('\t\t' + 'found sign-off:', name, email)
             if not is_valid_email(email):
                 infractions[commit.hash].append(f'invalid email: {email}')
             else:
                 sign_offs_name_email.append((name, email))
         
-        # Check that author is in the sign offs
+        # Check that author is in the sign-offs
         if not (commit.author_name, commit.author_email) in sign_offs_name_email:
             infractions[commit.hash].append(
                 f'sign-off not found for commit author: {commit.author_name} {commit.author_email}; found: {sign_offs}')
 
         # Separator between commits
-        verbose_print()
+        logger.verbose_print()
 
     return infractions
 
@@ -670,22 +689,22 @@ def check_infractions(
     :return: 0 if no infractions, non-zero otherwise
     """
     if len(infractions) > 0:
-        print('Missing sign-off(s)')
-        print()
+        logger.print('Missing sign-off(s):')
+        logger.print()
         for commit_sha, commit_infractions in infractions.items():
-            print('\t' + commit_sha)
+            logger.print('\t' + commit_sha)
             for commit_infraction in commit_infractions:
-                print('\t\t' + commit_infraction)
+                logger.print('\t\t' + commit_infraction)
         return 1
-    print('All good!')
+    logger.print('All good!')
     return 0
 
 
 def main() -> int:
     args = parse_args()
-    global verbose
-    verbose = args.verbose
     check_merge_commits = args.check_merge_commits
+    logger.quiet = args.quiet
+    logger.verbose = args.verbose
 
     # Detect CI
     # Use first one that applies
@@ -696,16 +715,17 @@ def main() -> int:
         if retriever.applies():
             commit_retriever = retriever
             break
-    print('detected:', commit_retriever.name())
+    logger.print('Detected:', commit_retriever.name())
 
     # Get range of commits
     commit_range = commit_retriever.get_commit_range()
     if commit_range is None:
         return 1
     commit_hash_base, commit_hash_head = commit_range
-    print()
-    verbose_print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
-    verbose_print()
+
+    logger.print()
+    logger.print(f'Checking commits: {commit_hash_base}..{commit_hash_head}')
+    logger.print()
 
     # Get commits
     commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
@@ -719,7 +739,7 @@ def main() -> int:
     result = check_infractions(infractions)
 
     if len(commits) == 0:
-        print('warning: no commits were actually checked')
+        logger.print('Warning: no commits were actually checked')
 
     return result
 
