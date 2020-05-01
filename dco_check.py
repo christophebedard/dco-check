@@ -724,6 +724,11 @@ def main() -> int:
     commit_hash_base, commit_hash_head = commit_range
 
     logger.print()
+    # Return success now if base == head
+    if commit_hash_base == commit_hash_head:
+        logger.print('No commits to check')
+        return 0
+
     logger.print(f'Checking commits: {commit_hash_base}..{commit_hash_head}')
     logger.print()
 
