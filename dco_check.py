@@ -333,7 +333,7 @@ class CommitDataRetriever:
 class GitRetriever(CommitDataRetriever):
 
     def name(self) -> str:
-        return 'Git (default)'
+        return 'git (default)'
 
     def applies(self) -> bool:
         # Unless we only have access to a partial commit history
@@ -388,14 +388,14 @@ class GitlabRetriever(CommitDataRetriever):
         # If we're on the default branch, just test new commits
         current_branch = get_env_var('CI_COMMIT_BRANCH')
         if current_branch is not None and current_branch == default_branch:
-            logger.verbose_print(f'on default branch \'{current_branch}\': will check new commits')
+            logger.verbose_print(f'\ton default branch \'{current_branch}\': will check new commits')
             commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
-            logger.verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+            logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             # Fetch default branch
             if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
                 logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
@@ -432,7 +432,7 @@ class CircleRetriever(CommitDataRetriever):
         current_branch = get_env_var('CIRCLE_BRANCH')
 
         # Test all commits off of the default branch
-        logger.verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+        logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
         if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
             logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
@@ -469,7 +469,7 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
 
         # Test all commits off of the default branch
-        logger.verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+        logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
         if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
             logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
@@ -505,14 +505,14 @@ class AppVeyorRetriever(CommitDataRetriever):
         # If we're on the default branch, just test new commits
         current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
         if current_branch is not None and current_branch == default_branch:
-            logger.verbose_print(f'on default branch \'{current_branch}\': will check new commits')
+            logger.verbose_print(f'\ton default branch \'{current_branch}\': will check new commits')
             commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
-            logger.verbose_print(f'on branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
+            logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             # Fetch default branch
             if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
                 logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
@@ -556,13 +556,15 @@ class GitHubRetriever(CommitDataRetriever):
         event_name = get_env_var('GITHUB_EVENT_NAME')
         if event_name is None:
             return None
-        logger.verbose_print('workflow event type:', event_name)
         commit_hash_base = None
         commit_hash_head = None
         if event_name == 'pull_request':
             # See: https://developer.github.com/v3/activity/events/types/#pullrequestevent
             commit_hash_base = self.event_payload['pull_request']['base']['sha']
             commit_hash_head = self.event_payload['pull_request']['head']['sha']
+            commit_branch_base = self.event_payload['pull_request']['base']['ref']
+            commit_branch_head = self.event_payload['pull_request']['head']['ref']
+            logger.verbose_print(f'\ton pull request branch \'{commit_branch_head}\': will check commits off of base branch \'{commit_branch_base}\'')
         elif event_name == 'push':
             # See: https://developer.github.com/v3/activity/events/types/#pushevent
             created = self.event_payload['created']
@@ -630,7 +632,8 @@ def process_commits(
         # Skip this commit if it is a merge commit and the
         # option for checking merge commits is not enabled
         if commit.is_merge_commit and not check_merge_commits:
-            logger.verbose_print('ignoring merge commit:', commit.hash)
+            logger.verbose_print('\t' + 'ignoring merge commit:', commit.hash)
+            logger.verbose_print()
             continue
 
         logger.verbose_print('\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else ''))
@@ -712,7 +715,7 @@ def main() -> int:
         if retriever.applies():
             commit_retriever = retriever
             break
-    logger.print('detected:', commit_retriever.name())
+    logger.print('Detected:', commit_retriever.name())
 
     # Get range of commits
     commit_range = commit_retriever.get_commit_range()
@@ -721,7 +724,7 @@ def main() -> int:
     commit_hash_base, commit_hash_head = commit_range
 
     logger.print()
-    logger.print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
+    logger.print(f'Checking commits: {commit_hash_base}..{commit_hash_head}')
     logger.print()
 
     # Get commits
@@ -736,7 +739,7 @@ def main() -> int:
     result = check_infractions(infractions)
 
     if len(commits) == 0:
-        logger.print('warning: no commits were actually checked')
+        logger.print('Warning: no commits were actually checked')
 
     return result
 
