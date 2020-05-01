@@ -686,7 +686,7 @@ def check_infractions(
     :return: 0 if no infractions, non-zero otherwise
     """
     if len(infractions) > 0:
-        logger.print('Missing sign-off(s)')
+        logger.print('Missing sign-off(s):')
         logger.print()
         for commit_sha, commit_infractions in infractions.items():
             logger.print('\t' + commit_sha)
@@ -721,8 +721,8 @@ def main() -> int:
     commit_hash_base, commit_hash_head = commit_range
 
     logger.print()
-    logger.verbose_print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
-    logger.verbose_print()
+    logger.print(f'checking commits: {commit_hash_base}..{commit_hash_head}')
+    logger.print()
 
     # Get commits
     commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
