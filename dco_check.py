@@ -30,21 +30,30 @@ from typing import Optional
 from typing import Tuple
 
 
-# TODO expose these two as parameters
 DEFAULT_BRANCH = 'master'
 DEFAULT_REMOTE = 'origin'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 
-def parse_args() -> argparse.Namespace:
+def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='Check that all commits of a proposed change have a DCO, i.e. are signed-off.',
+    )
+    parser.add_argument(
+        '-b', '--default-branch',
+        default=DEFAULT_BRANCH,
+        help='default branch to use, if necessary (default: %(default)s)',
     )
     parser.add_argument(
         '-m', '--check-merge-commits',
         action='store_true',
         default=False,
         help='check sign-offs on merge commits as well',
+    )
+    parser.add_argument(
+        '-r', '--default-remote',
+        default=DEFAULT_REMOTE,
+        help='default remote to use, if necessary (default: %(default)s)',
     )
     output_options_group = parser.add_mutually_exclusive_group()
     output_options_group.add_argument(
@@ -59,24 +68,51 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help='verbose mode (print out more information)',
     )
-    return parser.parse_args()
+    return parser
+
+
+def parse_args() -> argparse.Namespace:
+    return get_parser().parse_args()
+
+
+class Options:
+    """Simple container for options."""
+
+    def __init__(self, parser: argparse.ArgumentParser) -> None:
+        self.check_merge_commits = parser.get_default('m')
+        self.default_branch = parser.get_default('b')
+        self.default_remote = parser.get_default('r')
+        self.quiet = parser.get_default('q')
+        self.verbose = parser.get_default('v')
+
+    def set_options(self, args: argparse.Namespace) -> None:
+        self.check_merge_commits = args.check_merge_commits
+        self.default_branch = args.default_branch
+        self.default_remote = args.default_remote
+        self.quiet = args.quiet
+        self.verbose = args.verbose
+options = Options(get_parser())
 
 
 class Logger:
     """Simple logger to stdout which can be quiet or verbose."""
 
-    def __init__(self) -> None:
-        self.quiet = False
-        self.verbose = False
+    def __init__(self, parser: argparse.ArgumentParser) -> None:
+        self.__quiet = parser.get_default('q')
+        self.__verbose = parser.get_default('v')
+
+    def set_options(self, options: Options) -> None:
+        self.__quiet = options.quiet
+        self.__verbose = options.verbose
 
     def print(self, msg = '', *args, **kwargs) -> None:
-        if not self.quiet:
+        if not self.__quiet:
             print(msg, *args, **kwargs)
 
     def verbose_print(self, msg = '', *args, **kwargs) -> None:
-        if self.verbose:
+        if self.__verbose:
             print(msg, *args, **kwargs)
-logger = Logger()
+logger = Logger(get_parser())
 
 
 def run(
@@ -340,7 +376,7 @@ class GitRetriever(CommitDataRetriever):
         return True
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        commit_hash_base = get_common_ancestor_commit_hash(DEFAULT_BRANCH)
+        commit_hash_base = get_common_ancestor_commit_hash(options.default_branch)
         if commit_hash_base is None:
             return None
         commit_hash_head = get_head_commit_hash()
@@ -379,7 +415,7 @@ class GitlabRetriever(CommitDataRetriever):
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=DEFAULT_BRANCH)
+        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=options.default_branch)
 
         commit_hash_head = get_env_var('CI_COMMIT_SHA')
         if commit_hash_head is None:
@@ -397,11 +433,12 @@ class GitlabRetriever(CommitDataRetriever):
             # Otherwise test all commits off of the default branch
             logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             # Fetch default branch
-            if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-                logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+            remote = options.default_remote
+            if 0 != fetch_branch(default_branch, remote):
+                logger.print(f'failed to fetch \'{default_branch}\' from remote \'{remote}\'')
                 return None
             # Use remote default branch ref
-            remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
+            remote_branch_ref = remote + '/' + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
             if commit_hash_base is None:
                 return None
@@ -422,7 +459,7 @@ class CircleRetriever(CommitDataRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
         # TODO replace
-        default_branch = DEFAULT_BRANCH
+        default_branch = options.default_branch
 
         commit_hash_head = get_env_var('CIRCLE_SHA1')
         if commit_hash_head is None:
@@ -434,11 +471,12 @@ class CircleRetriever(CommitDataRetriever):
         # Test all commits off of the default branch
         logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
-        if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-            logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+        remote = options.default_remote
+        if 0 != fetch_branch(default_branch, remote):
+            logger.print(f'failed to fetch \'{default_branch}\' from remote \'{remote}\'')
             return None
         # Use remote default branch ref
-        remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
+        remote_branch_ref = remote + '/' + default_branch
         commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
         if commit_hash_base is None:
             return None
@@ -459,7 +497,7 @@ class AzurePipelinesRetriever(CommitDataRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables
         # TODO replace
-        default_branch = DEFAULT_BRANCH
+        default_branch = options.default_branch
 
         commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
         if commit_hash_head is None:
@@ -471,11 +509,12 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         # Test all commits off of the default branch
         logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
         # Fetch default branch
-        if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-            logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+        remote = options.default_remote
+        if 0 != fetch_branch(default_branch, remote):
+            logger.print(f'failed to fetch \'{default_branch}\' from remote \'{remote}\'')
             return None
         # Use remote default branch ref
-        remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
+        remote_branch_ref = remote + '/' + default_branch
         commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
         if commit_hash_base is None:
             return None
@@ -496,7 +535,7 @@ class AppVeyorRetriever(CommitDataRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         # See: https://www.appveyor.com/docs/environment-variables/
         # TODO review this
-        default_branch = DEFAULT_BRANCH
+        default_branch = options.default_branch
 
         commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT')
         if commit_hash_head is None:
@@ -514,11 +553,12 @@ class AppVeyorRetriever(CommitDataRetriever):
             # Otherwise test all commits off of the default branch
             logger.verbose_print(f'\ton branch \'{current_branch}\': will check forked commits off of default branch \'{default_branch}\'')
             # Fetch default branch
-            if 0 != fetch_branch(default_branch, DEFAULT_REMOTE):
-                logger.print(f'failed to fetch \'{default_branch}\' from remote \'{DEFAULT_REMOTE}\'')
+            remote = options.default_remote
+            if 0 != fetch_branch(default_branch, remote):
+                logger.print(f'failed to fetch \'{default_branch}\' from remote \'{remote}\'')
                 return None
             # Use remote default branch ref
-            remote_branch_ref = DEFAULT_REMOTE + '/' + default_branch
+            remote_branch_ref = remote + '/' + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
             if commit_hash_base is None:
                 return None
@@ -702,9 +742,8 @@ def check_infractions(
 
 def main() -> int:
     args = parse_args()
-    check_merge_commits = args.check_merge_commits
-    logger.quiet = args.quiet
-    logger.verbose = args.verbose
+    options.set_options(args)
+    logger.set_options(options)
 
     # Detect CI
     # Use first one that applies
@@ -733,12 +772,12 @@ def main() -> int:
     logger.print()
 
     # Get commits
-    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=check_merge_commits)
+    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head, check_merge_commits=options.check_merge_commits)
     if commits is None:
         return 1
 
     # Process them
-    infractions = process_commits(commits, check_merge_commits)
+    infractions = process_commits(commits, options.check_merge_commits)
 
     # Check if there are any infractions
     result = check_infractions(infractions)
