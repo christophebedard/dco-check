@@ -35,6 +35,11 @@ __version__ = '0.0.4'
 
 DEFAULT_BRANCH = 'master'
 DEFAULT_REMOTE = 'origin'
+ENV_VAR_CHECK_MERGE_COMMITS = 'DCO_CHECK_CHECK_MERGE_COMMITS'
+ENV_VAR_DEFAULT_BRANCH = 'DCO_CHECK_DEFAULT_BRANCH'
+ENV_VAR_DEFAULT_REMOTE = 'DCO_CHECK_DEFAULT_REMOTE'
+ENV_VAR_QUIET = 'DCO_CHECK_QUIET'
+ENV_VAR_VERBOSE = 'DCO_CHECK_VERBOSE'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 
@@ -88,31 +93,46 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '-b', '--default-branch',
         default=wrap_default_value(DEFAULT_BRANCH),
-        help='default branch to use, if necessary (default: %(default)s)',
+        help=(
+            'default branch to use, if necessary (default: %(default)s) '
+            f'(environment variable: {ENV_VAR_DEFAULT_BRANCH})'
+        ),
     )
     parser.add_argument(
         '-m', '--check-merge-commits',
         action='store_true',
         default=wrap_default_value(False),
-        help='check sign-offs on merge commits as well',
+        help=(
+            'check sign-offs on merge commits as well '
+            f'(environment variable: {ENV_VAR_CHECK_MERGE_COMMITS})'
+        ),
     )
     parser.add_argument(
         '-r', '--default-remote',
         default=wrap_default_value(DEFAULT_REMOTE),
-        help='default remote to use, if necessary (default: %(default)s)',
+        help=(
+            'default remote to use, if necessary (default: %(default)s) '
+            f'(environment variable: {ENV_VAR_DEFAULT_REMOTE})'
+        ),
     )
     output_options_group = parser.add_mutually_exclusive_group()
     output_options_group.add_argument(
         '-q', '--quiet',
         action='store_true',
         default=wrap_default_value(False),
-        help='quiet mode (do not print anything; simply exit with 0 or non-zero)',
+        help=(
+            'quiet mode (do not print anything; simply exit with 0 or non-zero) '
+            f'(environment variable: {ENV_VAR_QUIET})'
+        ),
     )
     output_options_group.add_argument(
         '-v', '--verbose',
         action='store_true',
         default=wrap_default_value(False),
-        help='verbose mode (print out more information)',
+        help=(
+            'verbose mode (print out more information) '
+            f'(environment variable: {ENV_VAR_VERBOSE})'
+        ),
     )
     return parser
 
@@ -177,20 +197,20 @@ class Options:
         self.check_merge_commits = environment_value_if_default_param(
             'check_merge_commits',
             bool,
-            'DCO_CHECK_CHECK_MERGE_COMMITS',
+            ENV_VAR_CHECK_MERGE_COMMITS,
         )
         self.default_branch = environment_value_if_default_param(
             'default_branch',
             str,
-            'DCO_CHECK_DEFAULT_BRANCH',
+            ENV_VAR_DEFAULT_BRANCH,
         )
         self.default_remote = environment_value_if_default_param(
             'default_remote',
             str,
-            'DCO_CHECK_DEFAULT_REMOTE',
+            ENV_VAR_DEFAULT_REMOTE,
         )
-        self.quiet = environment_value_if_default_param('quiet', bool, 'DCO_CHECK_QUIET')
-        self.verbose = environment_value_if_default_param('verbose', bool, 'DCO_CHECK_VERBOSE')
+        self.quiet = environment_value_if_default_param('quiet', bool, ENV_VAR_QUIET)
+        self.verbose = environment_value_if_default_param('verbose', bool, ENV_VAR_VERBOSE)
         if self.quiet and self.verbose:
             raise ValueError("'quiet' and 'verbose' cannot both be true")
 
