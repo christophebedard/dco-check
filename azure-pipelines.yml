@@ -19,6 +19,13 @@ jobs:
       versionSpec: '$(python.version)'
     displayName: 'Use Python $(python.version)'
   - script: |
+      pip install -U pytest pytest-cov pytest-repeat
+      pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint
+    displayName: 'Install test dependencies'
+  - script: |
+      pytest
+    displayName: 'Run tests'
+  - script: |
       python dco_check/dco_check.py --verbose
     displayName: 'Check DCO'
 - job: Windows
@@ -37,6 +44,13 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
     displayName: 'Use Python $(python.version)'
+  - script: |
+      pip install -U pytest pytest-cov pytest-repeat
+      pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint
+    displayName: 'Install test dependencies'
+  - script: |
+      pytest
+    displayName: 'Run tests'
   - script: |
       python dco_check/dco_check.py --verbose
     displayName: 'Check DCO'
