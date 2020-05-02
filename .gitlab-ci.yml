@@ -1,7 +1,7 @@
 variables:
   DOCKER_DRIVER: overlay2
 
-dco_check:
+Check DCO:
   image: python:3
   rules:
     - if: $CI_MERGE_REQUEST_ID
