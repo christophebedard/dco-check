@@ -28,11 +28,48 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 
 DEFAULT_BRANCH = 'master'
 DEFAULT_REMOTE = 'origin'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
+
+
+class BooleanDefaultValue:
+
+    def __init__(self, value):
+        assert(isinstance(value, bool))
+        self._value = value
+
+    def __bool__(self):
+        return self._value
+
+
+class StringDefaultValue(str):
+
+    pass
+
+
+_types = {
+    bool: BooleanDefaultValue,
+    str: StringDefaultValue,
+}
+
+
+def wrap_default_value(value: Union[bool, str]) -> Union[BooleanDefaultValue, StringDefaultValue, Any]:
+    # Inspired by: https://github.com/colcon/colcon-core/pull/288/files
+    global _types
+    if is_default_value(value):
+        raise ValueError('tried to wrap a default value a second time')
+    if type(value) in _types:
+        return _types[type(value)](value)
+    return value
+
+
+def is_default_value(value: Any) -> bool:
+    global _types
+    return isinstance(value, tuple(_types.values()))
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -41,31 +78,31 @@ def get_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '-b', '--default-branch',
-        default=DEFAULT_BRANCH,
+        default=wrap_default_value(DEFAULT_BRANCH),
         help='default branch to use, if necessary (default: %(default)s)',
     )
     parser.add_argument(
         '-m', '--check-merge-commits',
         action='store_true',
-        default=False,
+        default=wrap_default_value(False),
         help='check sign-offs on merge commits as well',
     )
     parser.add_argument(
         '-r', '--default-remote',
-        default=DEFAULT_REMOTE,
+        default=wrap_default_value(DEFAULT_REMOTE),
         help='default remote to use, if necessary (default: %(default)s)',
     )
     output_options_group = parser.add_mutually_exclusive_group()
     output_options_group.add_argument(
         '-q', '--quiet',
         action='store_true',
-        default=False,
+        default=wrap_default_value(False),
         help='quiet mode (do not print anything; simply exit with 0 or non-zero)',
     )
     output_options_group.add_argument(
         '-v', '--verbose',
         action='store_true',
-        default=False,
+        default=wrap_default_value(False),
         help='verbose mode (print out more information)',
     )
     return parser
@@ -76,7 +113,7 @@ def parse_args() -> argparse.Namespace:
 
 
 class Options:
-    """Simple container for options."""
+    """Simple container and utilities for options."""
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
         self.check_merge_commits = parser.get_default('m')
@@ -91,6 +128,30 @@ class Options:
         self.default_remote = args.default_remote
         self.quiet = args.quiet
         self.verbose = args.verbose
+
+    def apply_env_vars(self) -> None:
+        def real_cast(value: Any, param_type: Any) -> Any:
+            """Because bool('False') is True."""
+            if param_type is bool:
+                return value in [1, '1', 'true', 'True', 'y', 'Y', 'yes', 'Yes']
+            return param_type(value)
+        def environment_value_if_default_param(param_name: str, param_type: Any, env_var_name: str) -> Optional[Any]:
+            """Use environment variable value if it exists and if the corresponding parameter has a default value."""
+            if not hasattr(self, param_name):
+                raise ValueError('parameter name does not exist')
+            value = getattr(self, param_name)
+            # Use environment variable value if it exists, otherwise keep default value
+            if is_default_value(value):
+                return real_cast(get_env_var(env_var_name, print_if_not_found=False, default=value), param_type)
+            else:
+                return real_cast(value, param_type)
+        self.check_merge_commits = environment_value_if_default_param('check_merge_commits', bool, 'DCO_CHECK_CHECK_MERGE_COMMITS')
+        self.default_branch = environment_value_if_default_param('default_branch', str, 'DCO_CHECK_DEFAULT_BRANCH')
+        self.default_remote = environment_value_if_default_param('default_remote', str, 'DCO_CHECK_DEFAULT_REMOTE')
+        self.quiet = environment_value_if_default_param('quiet', bool, 'DCO_CHECK_QUIET')
+        self.verbose = environment_value_if_default_param('verbose', bool, 'DCO_CHECK_VERBOSE')
+        if self.quiet and self.verbose:
+            raise ValueError('\'quiet\' and \'verbose\' cannot both be true')
 options = Options(get_parser())
 
 
@@ -743,6 +804,7 @@ def check_infractions(
 def main() -> int:
     args = parse_args()
     options.set_options(args)
+    options.apply_env_vars()
     logger.set_options(options)
 
     # Detect CI
