@@ -12,4 +12,4 @@ environment:
 
 build: off
 test_script:
-  - "%PYTHON%\\python.exe dco_check.py --verbose"
+  - "%PYTHON%\\python.exe dco_check\\dco_check.py --verbose"

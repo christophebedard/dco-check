@@ -31,6 +31,9 @@ from typing import Tuple
 from typing import Union
 
 
+__version__ = '0.0.2'
+
+
 DEFAULT_BRANCH = 'master'
 DEFAULT_REMOTE = 'origin'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'

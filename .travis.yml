@@ -9,4 +9,4 @@ python:
   - "3.8"
 dist: bionic
 script:
-  - python3 dco_check.py --verbose
+  - python3 dco_check/dco_check.py --verbose

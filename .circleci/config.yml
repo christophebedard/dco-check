@@ -10,7 +10,7 @@ jobs:
     steps:
       - checkout
       - run:
-          command: python3 dco_check.py --verbose
+          command: python3 dco_check/dco_check.py --verbose
 
 workflows:
   workflow:

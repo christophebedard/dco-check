@@ -19,7 +19,7 @@ jobs:
       versionSpec: '$(python.version)'
     displayName: 'Use Python $(python.version)'
   - script: |
-      python dco_check.py --verbose
+      python dco_check/dco_check.py --verbose
     displayName: 'Check DCO'
 - job: Windows
   pool:
@@ -38,5 +38,5 @@ jobs:
       versionSpec: '$(python.version)'
     displayName: 'Use Python $(python.version)'
   - script: |
-      python dco_check.py --verbose
+      python dco_check/dco_check.py --verbose
     displayName: 'Check DCO'

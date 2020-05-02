@@ -23,4 +23,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        python3 dco_check.py --verbose
+        python3 dco_check/dco_check.py --verbose

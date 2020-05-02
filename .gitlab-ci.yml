@@ -8,4 +8,4 @@ dco_check:
     - if: $CI_EXTERNAL_PULL_REQUEST_IID
     - if: $CI_COMMIT_BRANCH == 'master'
   script:
-    - python3 dco_check.py --verbose
+    - python3 dco_check/dco_check.py --verbose
