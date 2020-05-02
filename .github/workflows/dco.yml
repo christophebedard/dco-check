@@ -1,4 +1,4 @@
-name: CI
+name: DCO
 
 on:
   pull_request:
@@ -7,25 +7,17 @@ on:
       - master
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8]
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install test dependencies
-      run: |
-        pip install -U pytest pytest-cov pytest-repeat
-        pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint
-    - name: Run tests
-      run: |
-        pytest
     - name: Check DCO
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
