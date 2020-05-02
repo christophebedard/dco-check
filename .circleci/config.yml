@@ -10,6 +10,14 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install test dependencies
+          command: |
+            pip install -U pytest pytest-cov pytest-repeat
+            pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint
+      - run:
+          name: Run tests
+          command: pytest
+      - run:
           name: Check DCO
           command: python3 dco_check/dco_check.py --verbose
 

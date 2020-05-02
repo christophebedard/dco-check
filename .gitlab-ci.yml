@@ -1,6 +1,18 @@
 variables:
   DOCKER_DRIVER: overlay2
 
+Test:
+  image: python:3
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_EXTERNAL_PULL_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == 'master'
+  before_script:
+    - pip install -U pytest pytest-cov pytest-repeat
+    - pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint
+  script:
+    - pytest
+
 Check DCO:
   image: python:3
   rules:
