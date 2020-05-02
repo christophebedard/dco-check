@@ -30,7 +30,7 @@ from typing import Tuple
 from typing import Union
 
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 
 DEFAULT_BRANCH = 'master'
@@ -691,6 +691,8 @@ class AzurePipelinesRetriever(CommitDataRetriever):
 
         # TODO support testing only new commits on the default branch
         current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
+
+        # TODO use 'System.PullRequest.TargetBranch' and 'System.PullRequest.PullRequestId'
 
         # Test all commits off of the default branch
         logger.verbose_print(
