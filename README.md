@@ -47,7 +47,7 @@ Run with `--help` for more information and options, including:
 * quiet mode
 * verbose mode
 
-Those options can alternatively be set through environment variables (see `--help`).
+Those options can alternatively be set through environment variables (see `--help`), but commandline arguments always have precedence over environment variables.
 
 ## How it works
 
