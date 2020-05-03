@@ -54,7 +54,7 @@ Those options can alternatively be set through environment variables (see `--hel
 `dco-check` focuses on two use-cases:
 
 1. Commits part of a feature branch, i.e. a proposed change (pull request or merge request)
-1. Commits on the default branch, e.g. `master`, especially the new commits pushed to the default branch
+1. Commits on the default branch, e.g. `master`, more specifically the new commits pushed to the default branch
 
 The first use-case is easy to cover given a normal git repository.
 We can simply use `git merge-base --fork-point $DEFAULT_BRANCH` to get the list of commits on a specific feature branch.
