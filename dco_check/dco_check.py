@@ -30,7 +30,7 @@ from typing import Tuple
 from typing import Union
 
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 
 DEFAULT_BRANCH = 'master'
