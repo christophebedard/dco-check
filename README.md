@@ -8,6 +8,7 @@ Status](https://img.shields.io/github/workflow/status/christophebedard/dco-check
 [![AppVeyor](https://img.shields.io/appveyor/build/christophebedard/dco-check?label=CI&logo=appveyor)](https://ci.appveyor.com/project/christophebedard/dco-check)
 [![CircleCI](https://img.shields.io/circleci/build/github/christophebedard/dco-check?label=CI&logo=circle&logoColor=white)](https://circleci.com/gh/christophebedard/dco-check)
 [![PyPI](https://img.shields.io/pypi/v/dco-check)](https://pypi.org/project/dco-check/)
+[![codecov](https://codecov.io/gh/christophebedard/dco-check/branch/master/graph/badge.svg)](https://codecov.io/gh/christophebedard/dco-check)
 [![License](https://img.shields.io/github/license/christophebedard/dco-check)](https://github.com/christophebedard/dco-check/blob/master/LICENSE)
 
 Simple DCO check script to be used in any CI.
