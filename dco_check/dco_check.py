@@ -74,9 +74,9 @@ def wrap_default_value(
     global _types
     if is_default_value(value):
         raise ValueError('tried to wrap a default value a second time')
-    if type(value) in _types:
-        return _types[type(value)](value)
-    return value
+    if type(value) not in _types:
+        raise ValueError(f"type '{value.__class__.__name__}' is not supported")
+    return _types[type(value)](value)
 
 
 def is_default_value(value: Any) -> bool:
