@@ -137,9 +137,14 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse arguments."""
-    return get_parser().parse_args()
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """
+    Parse arguments.
+
+    :param argv: the arguments to use, or `None` for sys.argv
+    :return: the parsed arguments
+    """
+    return get_parser().parse_args(argv)
 
 
 class Options:
@@ -986,13 +991,14 @@ def check_infractions(
     return 0
 
 
-def main() -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     """
     Entrypoint.
 
+    :param argv: the arguments to use, or `None` for sys.argv
     :return: 0 if successful, non-zero otherwise
     """
-    args = parse_args()
+    args = parse_args(argv)
     options.set_options(args)
     options.apply_env_vars()
     logger.set_options(options)
