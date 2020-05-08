@@ -928,7 +928,7 @@ def process_commits(
         logger.verbose_print(
             '\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else '')
         )
-        logger.verbose_print('\t' + commit.author_name, commit.author_email)
+        logger.verbose_print('\t' + (commit.author_name or 'N/A'), (commit.author_email or 'N/A'))
         logger.verbose_print('\t' + commit.title)
         logger.verbose_print('\t' + '\n\t'.join(commit.body))
 
