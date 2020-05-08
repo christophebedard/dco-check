@@ -14,12 +14,15 @@
 
 import argparse
 import os
+import sys
 import unittest
+from unittest.mock import patch
 
 from dco_check.dco_check import BooleanDefaultValue
 from dco_check.dco_check import get_parser
 from dco_check.dco_check import is_default_value
 from dco_check.dco_check import Options
+from dco_check.dco_check import parse_args
 from dco_check.dco_check import StringDefaultValue
 from dco_check.dco_check import wrap_default_value
 
@@ -30,6 +33,14 @@ class TestOptionsArgs(unittest.TestCase):
         super().__init__(
             *args,
         )
+
+    def test_parse_args(self) -> None:
+        # To simply test the call itself
+        test_argv = ['dco_check/dco_check.py', '-v', '-b', 'my-default-branch']
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            self.assertEqual(True, args.verbose)
+            self.assertEqual('my-default-branch', args.default_branch)
 
     def test_default_value_utils(self) -> None:
         self.assertFalse(is_default_value('mystr'))
