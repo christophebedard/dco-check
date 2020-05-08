@@ -54,10 +54,17 @@ class TestUtils(unittest.TestCase):
         self.assertIsNone(extract_name_and_email('<abc>'))
 
     def test_get_env_var(self) -> None:
-        # We're not going to bother testing the print_if_not_found option
         self.assertIsNone(get_env_var(''))
-        self.assertIsNone(get_env_var('THIS_PROBABLY_DOES_NOT_EXIST'))
-        self.assertEqual('abc', get_env_var('THIS_PROBABLY_DOES_NOT_EXIST', default='abc'))
+        self.assertIsNone(get_env_var('THIS_PROBABLY_DOES_NOT_EXIST', print_if_not_found=True))
+        self.assertIsNone(get_env_var('THIS_PROBABLY_DOES_NOT_EXIST', print_if_not_found=False))
+        self.assertEqual(
+            'abc',
+            get_env_var('THIS_PROBABLY_DOES_NOT_EXIST', default='abc', print_if_not_found=True),
+        )
+        self.assertEqual(
+            'abc',
+            get_env_var('THIS_PROBABLY_DOES_NOT_EXIST', default='abc', print_if_not_found=False),
+        )
         self.assertEqual('', get_env_var('THIS_PROBABLY_DOES_NOT_EXIST', default=''))
 
         os.environ['THIS_WILL_EXIST'] = 'xyz'
