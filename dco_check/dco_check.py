@@ -177,7 +177,7 @@ class Options:
             param_name: str,
             param_type: Any,
             env_var_name: str,
-        ) -> Optional[Any]:
+        ) -> Optional[Any]:  # pragma: no cover
             """
             Choose value between environment variable and CLI argument.
 
