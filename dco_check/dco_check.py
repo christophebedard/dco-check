@@ -460,15 +460,6 @@ class CommitInfo:
         self.author_email = author_email
         self.is_merge_commit = is_merge_commit
 
-    def __repr__(self) -> str:  # noqa: D105
-        s = (
-            f'hash: {self.hash}\ntitle: {self.title}\nbody: {self.body}\n'
-            f'author: {self.author_name} <{self.author_email}>'
-        )
-        if self.is_merge_commit:
-            s += '\n(merge commit)'
-        return s
-
 
 class CommitDataRetriever:
     """
