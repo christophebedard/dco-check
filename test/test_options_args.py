@@ -18,6 +18,7 @@ import unittest
 
 from dco_check.dco_check import BooleanDefaultValue
 from dco_check.dco_check import get_parser
+from dco_check.dco_check import is_default_value
 from dco_check.dco_check import Options
 from dco_check.dco_check import StringDefaultValue
 from dco_check.dco_check import wrap_default_value
@@ -29,6 +30,22 @@ class TestOptionsArgs(unittest.TestCase):
         super().__init__(
             *args,
         )
+
+    def test_default_value_utils(self) -> None:
+        self.assertFalse(is_default_value('mystr'))
+
+        wrapped = wrap_default_value('mystr')
+        self.assertTrue(is_default_value(wrapped))
+        self.assertEqual('mystr', str(wrapped))
+
+        # Double wrap
+        with self.assertRaises(ValueError):
+            wrap_default_value(wrapped)
+
+        # int is not a supported type right now
+        self.assertFalse(is_default_value(123))
+        with self.assertRaises(BaseException):
+            wrap_default_value(123)
 
     def test_options_basic(self) -> None:
         options = Options(get_parser())
