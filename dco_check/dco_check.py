@@ -74,9 +74,9 @@ def wrap_default_value(
     global _types
     if is_default_value(value):
         raise ValueError('tried to wrap a default value a second time')
-    if type(value) in _types:
-        return _types[type(value)](value)
-    return value
+    if type(value) not in _types:
+        raise ValueError(f"type '{value.__class__.__name__}' is not supported")
+    return _types[type(value)](value)
 
 
 def is_default_value(value: Any) -> bool:
@@ -137,9 +137,14 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse arguments."""
-    return get_parser().parse_args()
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """
+    Parse arguments.
+
+    :param argv: the arguments to use, or `None` for sys.argv
+    :return: the parsed arguments
+    """
+    return get_parser().parse_args(argv)
 
 
 class Options:
@@ -177,7 +182,7 @@ class Options:
             param_name: str,
             param_type: Any,
             env_var_name: str,
-        ) -> Optional[Any]:
+        ) -> Optional[Any]:  # pragma: no cover
             """
             Choose value between environment variable and CLI argument.
 
@@ -407,13 +412,10 @@ def extract_name_and_email(
     :param name_and_email: the name and email string
     :return: the extracted (name, email) tuple, or `None` if it failed
     """
-    email_match = re.search('<(.*)>', name_and_email)
-    if email_match is None:
+    match = re.search('(.*) <(.*)>', name_and_email)
+    if match is None:
         return None
-    name_match = re.search('(.*) <', name_and_email)
-    if name_match is None:
-        return None
-    return name_match.group(1), email_match.group(1)
+    return match.group(1), match.group(2)
 
 
 def get_env_var(
@@ -462,15 +464,6 @@ class CommitInfo:
         self.author_name = author_name
         self.author_email = author_email
         self.is_merge_commit = is_merge_commit
-
-    def __repr__(self) -> str:  # noqa: D105
-        s = (
-            f'hash: {self.hash}\ntitle: {self.title}\nbody: {self.body}\n'
-            f'author: {self.author_name} <{self.author_email}>'
-        )
-        if self.is_merge_commit:
-            s += '\n(merge commit)'
-        return s
 
 
 class CommitDataRetriever:
@@ -564,7 +557,7 @@ class GitRetriever(CommitDataRetriever):
                     commit_body,
                     author_name,
                     author_email,
-                    is_merge_commit
+                    is_merge_commit,
                 )
             )
         return commits
@@ -931,7 +924,7 @@ def process_commits(
         logger.verbose_print(
             '\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else '')
         )
-        logger.verbose_print('\t' + commit.author_name, commit.author_email)
+        logger.verbose_print('\t' + (commit.author_name or 'N/A'), (commit.author_email or 'N/A'))
         logger.verbose_print('\t' + commit.title)
         logger.verbose_print('\t' + '\n\t'.join(commit.body))
 
@@ -998,13 +991,14 @@ def check_infractions(
     return 0
 
 
-def main() -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     """
     Entrypoint.
 
+    :param argv: the arguments to use, or `None` for sys.argv
     :return: 0 if successful, non-zero otherwise
     """
-    args = parse_args()
+    args = parse_args(argv)
     options.set_options(args)
     options.apply_env_vars()
     logger.set_options(options)
@@ -1063,5 +1057,5 @@ def main() -> int:
     return result
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     sys.exit(main())

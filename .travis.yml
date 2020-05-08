@@ -12,5 +12,5 @@ install:
   - pip install -U pytest pytest-cov pytest-repeat
   - pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint
 script:
-  - pytest
+  - python3 -m pytest
   - python3 dco_check/dco_check.py --verbose
