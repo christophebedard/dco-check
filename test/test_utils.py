@@ -18,6 +18,7 @@ import unittest
 from dco_check.dco_check import extract_name_and_email
 from dco_check.dco_check import get_env_var
 from dco_check.dco_check import is_valid_email
+from dco_check.dco_check import split_commits_data
 
 
 class TestUtils(unittest.TestCase):
@@ -70,3 +71,19 @@ class TestUtils(unittest.TestCase):
         os.environ['THIS_WILL_EXIST'] = 'xyz'
         self.assertEqual('xyz', get_env_var('THIS_WILL_EXIST'))
         self.assertEqual('xyz', get_env_var('THIS_WILL_EXIST', default='abc'))
+
+    def test_split_commits_data(self) -> None:
+        # This is just a split on a string, but let's test it anyway
+        data = (
+            'abc'
+            '\x1e'
+            'def'
+        )
+        self.assertEqual(['abc', 'def'], split_commits_data(data))
+        data = (
+            'abc'
+            '\x1e'
+            'def'
+            '\x1e'
+        )
+        self.assertEqual(['abc', 'def'], split_commits_data(data))
