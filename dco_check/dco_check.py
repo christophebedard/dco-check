@@ -407,13 +407,10 @@ def extract_name_and_email(
     :param name_and_email: the name and email string
     :return: the extracted (name, email) tuple, or `None` if it failed
     """
-    email_match = re.search('<(.*)>', name_and_email)
-    if email_match is None:
+    match = re.search('(.*) <(.*)>', name_and_email)
+    if match is None:
         return None
-    name_match = re.search('(.*) <', name_and_email)
-    if name_match is None:
-        return None
-    return name_match.group(1), email_match.group(1)
+    return match.group(1), match.group(2)
 
 
 def get_env_var(
