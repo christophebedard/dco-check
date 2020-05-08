@@ -561,7 +561,7 @@ class GitRetriever(CommitDataRetriever):
                     commit_body,
                     author_name,
                     author_email,
-                    is_merge_commit
+                    is_merge_commit,
                 )
             )
         return commits
