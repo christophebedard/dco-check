@@ -710,30 +710,53 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
         if commit_hash_head is None:
             return None
-
-        # TODO support testing only new commits on the default branch
         current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
         if current_branch is None:
             return None
 
-        # TODO use 'System.PullRequest.TargetBranch' and 'System.PullRequest.PullRequestId'
-
-        # Test all commits off of the default branch
-        logger.verbose_print(
-            f"\ton branch '{current_branch}': "
-            f"will check forked commits off of default branch '{default_branch}'"
+        # Check if pull request
+        is_pull_request = get_env_var(
+            'SYSTEM_PULLREQUEST_PULLREQUESTID',
+            print_if_not_found=False,
         )
-        # Fetch default branch
-        remote = options.default_remote
-        if 0 != fetch_branch(default_branch, remote):
-            logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
-            return None
-        # Use remote default branch ref
-        remote_branch_ref = remote + '/' + default_branch
-        commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-        if commit_hash_base is None:
-            return None
-        return commit_hash_base, commit_hash_head
+        if is_pull_request:
+            # Test all commits off of the target branch
+            target_branch = get_env_var('SYSTEM_PULLREQUEST_TARGETBRANCH')
+            if target_branch is None:
+                return None
+            logger.verbose_print(
+                f"\ton pull request branch '{current_branch}': "
+                f"will check forked commits off of target branch '{target_branch}'"
+            )
+            # Fetch target branch
+            remote = options.default_remote
+            if 0 != fetch_branch(target_branch, remote):
+                logger.print(f"failed to fetch '{target_branch}' from remote '{remote}'")
+                return None
+            # Use remote default branch ref
+            remote_branch_ref = remote + '/' + target_branch
+            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+            if commit_hash_base is None:
+                return None
+            return commit_hash_base, commit_hash_head
+        else:
+            # TODO support testing only new commits on the default branch
+            # Test all commits off of the default branch
+            logger.verbose_print(
+                f"\ton branch '{current_branch}': "
+                f"will check forked commits off of default branch '{default_branch}'"
+            )
+            # Fetch default branch
+            remote = options.default_remote
+            if 0 != fetch_branch(default_branch, remote):
+                logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
+                return None
+            # Use remote default branch ref
+            remote_branch_ref = remote + '/' + default_branch
+            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+            if commit_hash_base is None:
+                return None
+            return commit_hash_base, commit_hash_head
 
     def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
         """Get commit data."""
