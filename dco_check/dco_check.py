@@ -304,6 +304,32 @@ def get_common_ancestor_commit_hash(
     return run(command)
 
 
+def get_default_branch_from_remote(
+    remote: str,
+) -> Optional[str]:
+    """
+    Get default branch from remote.
+
+    :param remote: the remote name
+    :return: the default branch, or None if it failed
+    """
+    # https://stackoverflow.com/questions/28666357/git-how-to-get-default-branch#comment92366240_50056710  # noqa: E501
+    #   $ git remote show origin
+    cmd = ['git', 'remote', 'show', remote]
+    result = run(cmd)
+    if not result:
+        return None
+    result_lines = result.split('\n')
+    branch = None
+    for result_line in result_lines:
+        # There is a two-space indentation
+        match = re.match('  HEAD branch: (.*)', result_line)
+        if match is not None:
+            branch = match[1]
+            break
+    return branch
+
+
 def fetch_branch(
     branch: str,
     remote: str = 'origin',
@@ -496,7 +522,9 @@ class GitRetriever(CommitDataRetriever):
 
         :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
         """
-        commit_hash_base = get_common_ancestor_commit_hash(options.default_branch)
+        default_branch = options.default_branch
+        logger.verbose_print(f"\tusing default branch '{default_branch}'")
+        commit_hash_base = get_common_ancestor_commit_hash(default_branch)
         if commit_hash_base is None:
             return None
         commit_hash_head = get_head_commit_hash()
@@ -601,7 +629,7 @@ class GitlabRetriever(CommitDataRetriever):
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
-class CircleRetriever(CommitDataRetriever):
+class CircleCiRetriever(CommitDataRetriever):
     """Implementation for CircleCI."""
 
     def name(self) -> str:
@@ -621,8 +649,8 @@ class CircleRetriever(CommitDataRetriever):
         :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
         """
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
-        # TODO replace
         default_branch = options.default_branch
+        logger.verbose_print(f"\tusing default branch '{default_branch}'")
 
         commit_hash_head = get_env_var('CIRCLE_SHA1')
         if commit_hash_head is None:
@@ -673,8 +701,8 @@ class AzurePipelinesRetriever(CommitDataRetriever):
         :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
         """
         # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables  # noqa: E501
-        # TODO replace
         default_branch = options.default_branch
+        logger.verbose_print(f"\tusing default branch '{default_branch}'")
 
         commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
         if commit_hash_head is None:
@@ -727,8 +755,8 @@ class AppVeyorRetriever(CommitDataRetriever):
         :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
         """
         # See: https://www.appveyor.com/docs/environment-variables/
-        # TODO review this
         default_branch = options.default_branch
+        logger.verbose_print(f"\tusing default branch '{default_branch}'")
 
         commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT')
         if commit_hash_head is None:
@@ -994,7 +1022,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         GitHubRetriever,
         AzurePipelinesRetriever,
         AppVeyorRetriever,
-        CircleRetriever,
+        CircleCiRetriever,
         GitRetriever,
     ]
     commit_retriever = None
