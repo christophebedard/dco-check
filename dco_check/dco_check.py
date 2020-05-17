@@ -91,7 +91,7 @@ def get_parser() -> argparse.ArgumentParser:
         description='Check that all commits of a proposed change have a DCO, i.e. are signed-off.',
     )
     parser.add_argument(
-        '-b', '--default-branch',
+        '-b', '--default-branch', metavar='BRANCH',
         default=wrap_default_value(DEFAULT_BRANCH),
         help=(
             'default branch to use, if necessary (default: %(default)s) '
@@ -108,7 +108,7 @@ def get_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        '-r', '--default-remote',
+        '-r', '--default-remote', metavar='REMOTE',
         default=wrap_default_value(DEFAULT_REMOTE),
         help=(
             'default remote to use, if necessary (default: %(default)s) '
