@@ -656,7 +656,8 @@ class CircleCiRetriever(CommitDataRetriever):
         if commit_hash_head is None:
             return None
 
-        # TODO support testing only new commits on the default branch
+        # TODO support testing only new commits on the default branch using pipeline variables
+        #   https://circleci.com/docs/2.0/pipeline-variables/
         current_branch = get_env_var('CIRCLE_BRANCH')
         if current_branch is None:
             return None
