@@ -658,6 +658,8 @@ class CircleCiRetriever(CommitDataRetriever):
 
         # TODO support testing only new commits on the default branch
         current_branch = get_env_var('CIRCLE_BRANCH')
+        if current_branch is None:
+            return None
 
         # Test all commits off of the default branch
         logger.verbose_print(
@@ -710,6 +712,8 @@ class AzurePipelinesRetriever(CommitDataRetriever):
 
         # TODO support testing only new commits on the default branch
         current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
+        if current_branch is None:
+            return None
 
         # TODO use 'System.PullRequest.TargetBranch' and 'System.PullRequest.PullRequestId'
 
