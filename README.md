@@ -72,7 +72,18 @@ However, since one of the goals of `dco-check` is to be as easy to use as possib
 This is why `dco-check` detects the current CI platform and uses whatever information that platform can provide.
 Otherwise, it falls back on a default generic implementation which uses simple git commands.
 
-<!-- ## CI support -->
+## CI support
+
+Below is a summary of the supported CIs along with their known behaviour.
+
+| CI | Default branch detection | New changes on default branch |
+|:--:|:--------------------------------------:|:-----------------------------:|
+|GitHub|yes, using command||
+|GitLab|yes, through CI|yes|
+|Azure Pipelines|yes, using command||
+|AppVeyor|yes, using command||
+|CircleCI|yes, using command||
+|Git (default)|yes, using command|no|
 
 <!-- ## Example CI configurations -->
 
