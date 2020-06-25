@@ -479,24 +479,17 @@ class CommitDataRetriever:
 class GitRetriever(CommitDataRetriever):
     """Implementation for any git repository."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'git (default)'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         # Unless we only have access to a partial commit history
         return True
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
-        commit_hash_base = get_common_ancestor_commit_hash(options.default_branch)
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
+        default_branch = options.default_branch
+        logger.verbose_print(f"\tusing default branch '{default_branch}'")
+        commit_hash_base = get_common_ancestor_commit_hash(default_branch)
         if commit_hash_base is None:
             return None
         commit_hash_head = get_head_commit_hash()
@@ -510,8 +503,7 @@ class GitRetriever(CommitDataRetriever):
         head: str,
         check_merge_commits: bool = False,
         **kwargs,
-    ) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         ignore_merge_commits = not check_merge_commits
         commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
         individual_commits = split_commits_data(commits_data)
@@ -541,25 +533,16 @@ class GitRetriever(CommitDataRetriever):
         return commits
 
 
-class GitlabRetriever(CommitDataRetriever):
+class GitlabRetriever(GitRetriever):
     """Implementation for GitLab CI."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'GitLab'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('GITLAB_CI', print_if_not_found=False) is not None
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         default_branch = get_env_var('CI_DEFAULT_BRANCH', default=options.default_branch)
 
@@ -578,6 +561,32 @@ class GitlabRetriever(CommitDataRetriever):
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
+        elif get_env_var('CI_MERGE_REQUEST_ID', print_if_not_found=False):
+            # Get merge request target branch
+            target_branch = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_NAME')
+            if target_branch is None:
+                return None
+            logger.verbose_print(
+                f"\ton merge request branch '{current_branch}': "
+                f"will check new commits off of target branch '{target_branch}'"
+            )
+            target_branch_sha = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_SHA')
+            if target_branch_sha is None:
+                return None
+            return target_branch_sha, commit_hash_head
+        elif get_env_var('CI_EXTERNAL_PULL_REQUEST_IID', print_if_not_found=False):
+            # Get external merge request target branch
+            target_branch = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME')
+            if target_branch is None:
+                return None
+            logger.verbose_print(
+                f"\ton merge request branch '{current_branch}': "
+                f"will check new commits off of target branch '{target_branch}'"
+            )
+            target_branch_sha = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_SHA')
+            if target_branch_sha is None:
+                return None
+            return target_branch_sha, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
             logger.verbose_print(
@@ -596,156 +605,41 @@ class GitlabRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
-        return GitRetriever().get_commits(base, head, **kwargs)
 
-
-class CircleRetriever(CommitDataRetriever):
+class CircleCiRetriever(GitRetriever):
     """Implementation for CircleCI."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'CircleCI'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('CIRCLECI', print_if_not_found=False) is not None
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
-        # TODO replace
         default_branch = options.default_branch
 
         commit_hash_head = get_env_var('CIRCLE_SHA1')
         if commit_hash_head is None:
             return None
 
-        # TODO support testing only new commits on the default branch
-        current_branch = get_env_var('CIRCLE_BRANCH')
-
-        # Test all commits off of the default branch
-        logger.verbose_print(
-            f"\ton branch '{current_branch}': "
-            f"will check forked commits off of default branch '{default_branch}'"
-        )
-        # Fetch default branch
-        remote = options.default_remote
-        if 0 != fetch_branch(default_branch, remote):
-            logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
-            return None
-        # Use remote default branch ref
-        remote_branch_ref = remote + '/' + default_branch
-        commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-        if commit_hash_base is None:
-            return None
-        return commit_hash_base, commit_hash_head
-
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
-        return GitRetriever().get_commits(base, head, **kwargs)
-
-
-class AzurePipelinesRetriever(CommitDataRetriever):
-    """Implementation for Azure Pipelines."""
-
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
-        return 'Azure Pipelines'
-
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
-        return get_env_var('TF_BUILD', print_if_not_found=False) is not None
-
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
-        # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables  # noqa: E501
-        # TODO replace
-        default_branch = options.default_branch
-
-        commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
-        if commit_hash_head is None:
-            return None
-
-        # TODO support testing only new commits on the default branch
-        current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
-
-        # TODO use 'System.PullRequest.TargetBranch' and 'System.PullRequest.PullRequestId'
-
-        # Test all commits off of the default branch
-        logger.verbose_print(
-            f"\ton branch '{current_branch}': "
-            f"will check forked commits off of default branch '{default_branch}'"
-        )
-        # Fetch default branch
-        remote = options.default_remote
-        if 0 != fetch_branch(default_branch, remote):
-            logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
-            return None
-        # Use remote default branch ref
-        remote_branch_ref = remote + '/' + default_branch
-        commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-        if commit_hash_base is None:
-            return None
-        return commit_hash_base, commit_hash_head
-
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
-        return GitRetriever().get_commits(base, head, **kwargs)
-
-
-class AppVeyorRetriever(CommitDataRetriever):
-    """Implementation for AppVeyor."""
-
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
-        return 'AppVeyor'
-
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
-        return get_env_var('APPVEYOR', print_if_not_found=False) is not None
-
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
-        # See: https://www.appveyor.com/docs/environment-variables/
-        # TODO review this
-        default_branch = options.default_branch
-
-        commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT')
-        if commit_hash_head is None:
-            commit_hash_head = get_head_commit_hash()
-
-        # If we're on the default branch, just test new commits
-        current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
-        if current_branch is not None and current_branch == default_branch:
+        # Check if base revision is provided to the environment, e.g.
+        #   environment:
+        #     CIRCLE_BASE_REVISION: << pipeline.git.base_revision >>
+        # See:
+        #   https://circleci.com/docs/2.0/pipeline-variables/
+        #   https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
+        base_revision = get_env_var('CIRCLE_BASE_REVISION', print_if_not_found=False)
+        if base_revision:
             logger.verbose_print(
-                f"\ton default branch '{current_branch}': will check new commits"
+                f"\tchecking commits off of base revision '{base_revision}'"
             )
-            commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
-            if commit_hash_base is None:
-                return None
-            return commit_hash_base, commit_hash_head
+            return base_revision, commit_hash_head
         else:
-            # Otherwise test all commits off of the default branch
+            current_branch = get_env_var('CIRCLE_BRANCH')
+            if current_branch is None:
+                return None
+            # Test all commits off of the default branch
             logger.verbose_print(
                 f"\ton branch '{current_branch}': "
                 f"will check forked commits off of default branch '{default_branch}'"
@@ -762,30 +656,126 @@ class AppVeyorRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
-        return GitRetriever().get_commits(base, head, **kwargs)
+
+class AzurePipelinesRetriever(GitRetriever):
+    """Implementation for Azure Pipelines."""
+
+    def name(self) -> str:  # noqa: D102
+        return 'Azure Pipelines'
+
+    def applies(self) -> bool:  # noqa: D102
+        return get_env_var('TF_BUILD', print_if_not_found=False) is not None
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
+        # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables  # noqa: E501
+        commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
+        if commit_hash_head is None:
+            return None
+        current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
+        if current_branch is None:
+            return None
+
+        base_branch = None
+        # Check if pull request
+        is_pull_request = get_env_var(
+            'SYSTEM_PULLREQUEST_PULLREQUESTID',
+            print_if_not_found=False,
+        )
+        if is_pull_request:
+            # Test all commits off of the target branch
+            target_branch = get_env_var('SYSTEM_PULLREQUEST_TARGETBRANCH')
+            if target_branch is None:
+                return None
+            logger.verbose_print(
+                f"\ton pull request branch '{current_branch}': "
+                f"will check forked commits off of target branch '{target_branch}'"
+            )
+            base_branch = target_branch
+        else:
+            # Test all commits off of the default branch
+            default_branch = options.default_branch
+            logger.verbose_print(
+                f"\ton branch '{current_branch}': "
+                f"will check forked commits off of default branch '{default_branch}'"
+            )
+            base_branch = default_branch
+        # Fetch base branch
+        assert base_branch
+        remote = options.default_remote
+        if 0 != fetch_branch(base_branch, remote):
+            logger.print(f"failed to fetch '{base_branch}' from remote '{remote}'")
+            return None
+        # Use remote default branch ref
+        remote_branch_ref = remote + '/' + base_branch
+        commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+        if commit_hash_base is None:
+            return None
+        return commit_hash_base, commit_hash_head
+
+
+class AppVeyorRetriever(GitRetriever):
+    """Implementation for AppVeyor."""
+
+    def name(self) -> str:  # noqa: D102
+        return 'AppVeyor'
+
+    def applies(self) -> bool:  # noqa: D102
+        return get_env_var('APPVEYOR', print_if_not_found=False) is not None
+
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
+        # See: https://www.appveyor.com/docs/environment-variables/
+        default_branch = options.default_branch
+
+        commit_hash_head = get_env_var('APPVEYOR_REPO_COMMIT')
+        if commit_hash_head is None:
+            commit_hash_head = get_head_commit_hash()
+            if commit_hash_head is None:
+                return None
+
+        branch = get_env_var('APPVEYOR_REPO_BRANCH')
+        if branch is None:
+            return None
+
+        # Check if pull request
+        if get_env_var('APPVEYOR_PULL_REQUEST_NUMBER', print_if_not_found=False):
+            current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
+            if current_branch is None:
+                return None
+            target_branch = branch
+            logger.verbose_print(
+                f"\ton pull request branch '{current_branch}': "
+                f"will check commits off of target branch '{target_branch}'"
+            )
+            commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT') or commit_hash_head
+            if commit_hash_head is None:
+                return None
+            commit_hash_base = get_common_ancestor_commit_hash(target_branch)
+            if commit_hash_base is None:
+                return None
+            return commit_hash_base, commit_hash_head
+        else:
+            # Otherwise test all commits off of the default branch
+            current_branch = branch
+            logger.verbose_print(
+                f"\ton branch '{current_branch}': "
+                f"will check forked commits off of default branch '{default_branch}'"
+            )
+            commit_hash_base = get_common_ancestor_commit_hash(default_branch)
+            if commit_hash_base is None:
+                return None
+            return commit_hash_base, commit_hash_head
 
 
 class GitHubRetriever(CommitDataRetriever):
     """Implementation for GitHub CI."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'GitHub CI'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('GITHUB_ACTIONS', print_if_not_found=False) == 'true'
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         self.github_token = get_env_var('GITHUB_TOKEN')
         if self.github_token is None:
@@ -836,8 +826,12 @@ class GitHubRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    def get_commits(
+        self,
+        base: str,
+        head: str,
+        **kwargs,
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         # Request commit data
         compare_url_template = self.event_payload['repository']['compare_url']
         compare_url = compare_url_template.format(base=base, head=head)
@@ -994,7 +988,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         GitHubRetriever,
         AzurePipelinesRetriever,
         AppVeyorRetriever,
-        CircleRetriever,
+        CircleCiRetriever,
         GitRetriever,
     ]
     commit_retriever = None

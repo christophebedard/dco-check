@@ -72,7 +72,19 @@ However, since one of the goals of `dco-check` is to be as easy to use as possib
 This is why `dco-check` detects the current CI platform and uses whatever information that platform can provide.
 Otherwise, it falls back on a default generic implementation which uses simple git commands.
 
-<!-- ## CI support -->
+## CI support
+
+Below is a summary of the supported CIs along with their known behaviour.
+
+| CI | Detects new changes when pushing to default branch | Detects PRs/MRs | Gets base branch using | Get default branch using | Notes |
+|:--:|:--------------------------------------------------:|:---------------:|:----------------------:|:------------------------:|:-----:|
+|GitHub|✓|✓|CI|(not used)|retrieves commit data using the GitHub API, since GitHub does shallow clones by default|
+|GitLab|✓|✓|CI|CI|detects normal GitLab MRs and external (GitHub) MRs|
+|Azure Pipelines||✓|CI|CLI arguments||
+|AppVeyor||✓|CI|CLI arguments||
+|CircleCI|?||CI\* (or CLI arguments)|CLI arguments|\*can use base revision information if provided (see example)|
+|Travis CI|||CLI arguments|CLI arguments|supported by default as a normal git repo|
+|default (git)|||CLI arguments|CLI arguments|use locally; using in an unsupported CI which only does a shallow clone might cause problems|
 
 <!-- ## Example CI configurations -->
 
