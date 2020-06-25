@@ -559,7 +559,7 @@ class GitRetriever(CommitDataRetriever):
         return commits
 
 
-class GitlabRetriever(CommitDataRetriever):
+class GitlabRetriever(GitRetriever):
     """Implementation for GitLab CI."""
 
     def name(self) -> str:  # noqa: D102
@@ -605,16 +605,8 @@ class GitlabRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(
-        self,
-        base: str,
-        head: str,
-        **kwargs,
-    ) -> Optional[List[CommitInfo]]:  # noqa: D102
-        return GitRetriever().get_commits(base, head, **kwargs)
 
-
-class CircleCiRetriever(CommitDataRetriever):
+class CircleCiRetriever(GitRetriever):
     """Implementation for CircleCI."""
 
     def name(self) -> str:  # noqa: D102
@@ -655,16 +647,8 @@ class CircleCiRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(
-        self,
-        base: str,
-        head: str,
-        **kwargs,
-    ) -> Optional[List[CommitInfo]]:  # noqa: D102
-        return GitRetriever().get_commits(base, head, **kwargs)
 
-
-class AzurePipelinesRetriever(CommitDataRetriever):
+class AzurePipelinesRetriever(GitRetriever):
     """Implementation for Azure Pipelines."""
 
     def name(self) -> str:  # noqa: D102
@@ -729,16 +713,8 @@ class AzurePipelinesRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(
-        self,
-        base: str,
-        head: str,
-        **kwargs,
-    ) -> Optional[List[CommitInfo]]:  # noqa: D102
-        return GitRetriever().get_commits(base, head, **kwargs)
 
-
-class AppVeyorRetriever(CommitDataRetriever):
+class AppVeyorRetriever(GitRetriever):
     """Implementation for AppVeyor."""
 
     def name(self) -> str:  # noqa: D102
@@ -783,14 +759,6 @@ class AppVeyorRetriever(CommitDataRetriever):
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
-
-    def get_commits(
-        self,
-        base: str,
-        head: str,
-        **kwargs,
-    ) -> Optional[List[CommitInfo]]:  # noqa: D102
-        return GitRetriever().get_commits(base, head, **kwargs)
 
 
 class GitHubRetriever(CommitDataRetriever):
