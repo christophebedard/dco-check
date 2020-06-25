@@ -54,6 +54,8 @@ class TestOptionsArgs(unittest.TestCase):
         self.assertEqual(True, options.quiet)
         self.assertEqual(False, options.verbose)
 
+        self.assertDictEqual(vars(ns), options.get_options())
+
     @staticmethod
     def reset_environment() -> None:
         env_vars = [
