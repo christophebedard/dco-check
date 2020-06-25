@@ -823,7 +823,7 @@ class GitHubRetriever(CommitDataRetriever):
             else:
                 commit_hash_base = self.event_payload['before']
             commit_hash_head = self.event_payload['head_commit']['id']
-        else:
+        else:  # pragma: no cover
             logger.print('Unknown workflow event:', event_name)
             return None
         return commit_hash_base, commit_hash_head
@@ -844,7 +844,7 @@ class GitHubRetriever(CommitDataRetriever):
         }
         connection.request('GET', compare_url, headers=headers)
         response = connection.getresponse()
-        if 200 != response.getcode():
+        if 200 != response.getcode():  # pragma: no cover
             from pprint import pprint
             logger.print('Request failed: compare_url')
             logger.print('reponse:', pprint(response.read().decode()))

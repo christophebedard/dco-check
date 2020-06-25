@@ -12,7 +12,9 @@ environment:
 install:
   - "%PYTHON%\\python.exe -m pip install -U pytest pytest-cov pytest-repeat"
   - "%PYTHON%\\python.exe -m pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint"
+  - "%PYTHON%\\python.exe -m pip install -U codecov"
 build: off
 test_script:
-  - "%PYTHON%\\python.exe -m pytest"
+  - "%PYTHON%\\python.exe -m pytest --cov=dco_check --cov-branch --cov-report=xml"
   - "%PYTHON%\\python.exe dco_check\\dco_check.py --verbose"
+  - "%PYTHON%\\python.exe -m codecov -f coverage.xml"
