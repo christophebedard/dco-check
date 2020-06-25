@@ -78,7 +78,7 @@ Below is a summary of the supported CIs along with their known behaviour.
 
 | CI | Detects new changes when pushing to default branch | Gets base branch using | Notes |
 |:--:|:--------------------------------------------------:|:----------------------:|:-----:|
-|GitHub|✓|(not used)|retrieves commit data using the GitHub API|
+|GitHub|✓|CI|retrieves commit data using the GitHub API, since GitHub does shallow clones by default|
 |GitLab|✓|CI|detects normal GitLab MRs and external (GitHub) MRs|
 |Azure Pipelines||CLI arguments||
 |AppVeyor|✓|CLI arguments||
