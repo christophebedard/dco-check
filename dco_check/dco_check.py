@@ -736,14 +736,14 @@ class AppVeyorRetriever(GitRetriever):
         if branch is None:
             return None
 
-        # Check if merge request
+        # Check if pull request
         if get_env_var('APPVEYOR_PULL_REQUEST_NUMBER', print_if_not_found=False):
             current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
             if current_branch is None:
                 return None
             target_branch = branch
             logger.verbose_print(
-                f"\ton merge request branch '{current_branch}': "
+                f"\ton pull request branch '{current_branch}': "
                 f"will check commits off of target branch '{target_branch}'"
             )
             commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT') or commit_hash_head
