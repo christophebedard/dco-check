@@ -976,7 +976,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     :param argv: the arguments to use, or `None` for sys.argv
     :return: 0 if successful, non-zero otherwise
     """
-    args = parse_args()
+    args = parse_args(argv)
     options.set_options(args)
     logger.set_options(options)
 
