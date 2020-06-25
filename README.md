@@ -76,13 +76,13 @@ Otherwise, it falls back on a default generic implementation which uses simple g
 
 Below is a summary of the supported CIs along with their known behaviour.
 
-| CI | Detects new changes when pushing to default branch | Detects PRs/MRs | Gets base branch using | Get default branch using | Notes |
-|:--:|:--------------------------------------------------:|:---------------:|:----------------------:|:------------------------:|:-----:|
+| CI | Detects new changes when pushing to default branch | Detects PRs/MRs | Gets base branch using | Gets default branch using | Notes |
+|:--:|:--------------------------------------------------:|:---------------:|:----------------------:|:-------------------------:|:-----:|
 |GitHub|✓|✓|CI|(not used)|retrieves commit data using the GitHub API, since GitHub does shallow clones by default|
 |GitLab|✓|✓|CI|CI|detects normal GitLab MRs and external (GitHub) MRs|
 |Azure Pipelines||✓|CI|CLI arguments||
 |AppVeyor||✓|CI|CLI arguments||
-|CircleCI|?||CI\* (or CLI arguments)|CLI arguments|\*can use base revision information if provided (see example)|
+|CircleCI|✓||CI\* (or CLI arguments)|CLI arguments|\*can use base revision information if provided (see example)|
 |Travis CI|||CLI arguments|CLI arguments|supported by default as a normal git repo|
 |default (git)|||CLI arguments|CLI arguments|use locally; using in an unsupported CI which only does a shallow clone might cause problems|
 
