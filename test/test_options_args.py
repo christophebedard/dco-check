@@ -109,7 +109,7 @@ class TestOptionsArgs(unittest.TestCase):
             self.assertEqual(True, options.quiet)
             self.assertEqual(False, options.verbose)
 
-        # Raises if both quiet and verbose are enabled
+        # Exits if both quiet and verbose are enabled
         self.reset_environment()
         os.environ['DCO_CHECK_QUIET'] = 'True'
         # os.environ['DCO_CHECK_VERBOSE'] = 'False'
@@ -120,7 +120,7 @@ class TestOptionsArgs(unittest.TestCase):
         with patch.object(sys, 'argv', test_argv):
             args = parse_args()
             options = Options(get_parser())
-            with self.assertRaises(ValueError):
+            with self.assertRaises(SystemExit):
                 options.set_options(args)
 
         self.reset_environment()
@@ -129,7 +129,7 @@ class TestOptionsArgs(unittest.TestCase):
         with patch.object(sys, 'argv', test_argv):
             args = parse_args()
             options = Options(get_parser())
-            with self.assertRaises(ValueError):
+            with self.assertRaises(SystemExit):
                 options.set_options(args)
 
         self.reset_environment()

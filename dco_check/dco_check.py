@@ -184,9 +184,14 @@ class Options:
         self.default_remote = args.default_remote
         self.quiet = args.quiet
         self.verbose = args.verbose
-        # Sanity check; shouldn't happen with a mutually exclusive group
+        # Shouldn't happen with a mutually exclusive group,
+        # but can happen if one is set with an env var
+        # and the other is set with an arg
         if self.quiet and self.verbose:
-            raise ValueError("'quiet' and 'verbose' cannot both be true")
+            # Similar message to what is printed when using args for both
+            get_parser().print_usage()
+            print("'quiet' and 'verbose' cannot both be true")
+            sys.exit(1)
 
     def get_options(self) -> Dict:
         """Get all options as a dict."""
