@@ -618,34 +618,44 @@ class CircleCiRetriever(GitRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
         default_branch = options.default_branch
-        logger.verbose_print(f"\tusing default branch '{default_branch}'")
 
         commit_hash_head = get_env_var('CIRCLE_SHA1')
         if commit_hash_head is None:
             return None
 
-        # TODO support testing only new commits on the default branch using pipeline variables
+        # Check if base revision is provided to the environment, e.g.
+        #   environment:
+        #     CIRCLE_BASE_REVISION: << pipeline.git.base_revision >>
+        # See:
         #   https://circleci.com/docs/2.0/pipeline-variables/
-        current_branch = get_env_var('CIRCLE_BRANCH')
-        if current_branch is None:
-            return None
-
-        # Test all commits off of the default branch
-        logger.verbose_print(
-            f"\ton branch '{current_branch}': "
-            f"will check forked commits off of default branch '{default_branch}'"
-        )
-        # Fetch default branch
-        remote = options.default_remote
-        if 0 != fetch_branch(default_branch, remote):
-            logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
-            return None
-        # Use remote default branch ref
-        remote_branch_ref = remote + '/' + default_branch
-        commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-        if commit_hash_base is None:
-            return None
-        return commit_hash_base, commit_hash_head
+        #   https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
+        base_revision = get_env_var('CIRCLE_BASE_REVISION', print_if_not_found=False)
+        if base_revision:
+            # TODO: check if this allows us to check new commits pushed to master
+            logger.verbose_print(
+                f"\tchecking commits off of base revision '{base_revision}'"
+            )
+            return base_revision, commit_hash_head
+        else:
+            current_branch = get_env_var('CIRCLE_BRANCH')
+            if current_branch is None:
+                return None
+            # Test all commits off of the default branch
+            logger.verbose_print(
+                f"\ton branch '{current_branch}': "
+                f"will check forked commits off of default branch '{default_branch}'"
+            )
+            # Fetch default branch
+            remote = options.default_remote
+            if 0 != fetch_branch(default_branch, remote):
+                logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
+                return None
+            # Use remote default branch ref
+            remote_branch_ref = remote + '/' + default_branch
+            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+            if commit_hash_base is None:
+                return None
+            return commit_hash_base, commit_hash_head
 
 
 class AzurePipelinesRetriever(GitRetriever):

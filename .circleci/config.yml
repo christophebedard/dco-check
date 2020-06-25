@@ -7,6 +7,8 @@ jobs:
         type: string
     docker:
       - image: python:<< parameters.python_version >>
+    environment:
+      CIRCLE_BASE_REVISION: << pipeline.git.base_revision >>
     steps:
       - checkout
       - run:
