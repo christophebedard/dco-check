@@ -669,9 +669,6 @@ class AzurePipelinesRetriever(GitRetriever):
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables  # noqa: E501
-        default_branch = options.default_branch
-        logger.verbose_print(f"\tusing default branch '{default_branch}'")
-
         commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
         if commit_hash_head is None:
             return None
@@ -679,6 +676,7 @@ class AzurePipelinesRetriever(GitRetriever):
         if current_branch is None:
             return None
 
+        base_branch = None
         # Check if pull request
         is_pull_request = get_env_var(
             'SYSTEM_PULLREQUEST_PULLREQUESTID',
@@ -693,35 +691,28 @@ class AzurePipelinesRetriever(GitRetriever):
                 f"\ton pull request branch '{current_branch}': "
                 f"will check forked commits off of target branch '{target_branch}'"
             )
-            # Fetch target branch
-            remote = options.default_remote
-            if 0 != fetch_branch(target_branch, remote):
-                logger.print(f"failed to fetch '{target_branch}' from remote '{remote}'")
-                return None
-            # Use remote default branch ref
-            remote_branch_ref = remote + '/' + target_branch
-            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-            if commit_hash_base is None:
-                return None
-            return commit_hash_base, commit_hash_head
+            base_branch = target_branch
         else:
             # TODO support testing only new commits on the default branch
             # Test all commits off of the default branch
+            default_branch = options.default_branch
             logger.verbose_print(
                 f"\ton branch '{current_branch}': "
                 f"will check forked commits off of default branch '{default_branch}'"
             )
-            # Fetch default branch
-            remote = options.default_remote
-            if 0 != fetch_branch(default_branch, remote):
-                logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
-                return None
-            # Use remote default branch ref
-            remote_branch_ref = remote + '/' + default_branch
-            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-            if commit_hash_base is None:
-                return None
-            return commit_hash_base, commit_hash_head
+            base_branch = default_branch
+        # Fetch base branch
+        assert base_branch
+        remote = options.default_remote
+        if 0 != fetch_branch(base_branch, remote):
+            logger.print(f"failed to fetch '{base_branch}' from remote '{remote}'")
+            return None
+        # Use remote default branch ref
+        remote_branch_ref = remote + '/' + base_branch
+        commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+        if commit_hash_base is None:
+            return None
+        return commit_hash_base, commit_hash_head
 
 
 class AppVeyorRetriever(GitRetriever):
