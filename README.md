@@ -76,14 +76,15 @@ Otherwise, it falls back on a default generic implementation which uses simple g
 
 Below is a summary of the supported CIs along with their known behaviour.
 
-| CI | Default branch detection | New changes on default branch |
-|:--:|:--------------------------------------:|:-----------------------------:|
-|GitHub|yes, using command||
-|GitLab|yes, through CI|yes|
-|Azure Pipelines|yes, using command||
-|AppVeyor|yes, using command||
-|CircleCI|yes, using command||
-|Git (default)|yes, using command|no|
+| CI | Detects new changes when pushing to default branch | Gets base branch using | Notes |
+|:--:|:--------------------------------------------------:|:----------------------:|:-----:|
+|GitHub|✓|(not used)|retrieves commit data using the GitHub API|
+|GitLab|✓|CI||
+|Azure Pipelines||CLI arguments||
+|AppVeyor|✓|CLI arguments||
+|CircleCI|?|CLI arguments|can use base revision information if provided (see example)|
+|Travis CI||CLI arguments|supported by default as a normal git repo|
+|default (git)||CLI arguments|use locally; using in an unsupported CI which only does a shallow clone might cause problems|
 
 <!-- ## Example CI configurations -->
 
