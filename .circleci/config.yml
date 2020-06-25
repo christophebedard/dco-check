@@ -18,11 +18,13 @@ jobs:
             pip install -U flake8 flake8-blind-except flake8-builtins flake8-class-newline flake8-comprehensions flake8-deprecated flake8-docstrings flake8-import-order flake8-quotes pep8-naming pylint
       - run:
           name: Run tests
-          command: python -m pytest
+          command: python -m pytest --cov=dco_check --cov-branch --cov-report=xml
+      - codecov/upload
       - run:
           name: Check DCO
           command: python3 dco_check/dco_check.py --verbose
-
+orbs:
+  codecov: codecov/codecov@1.1.0
 workflows:
   workflow:
     jobs:
