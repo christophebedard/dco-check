@@ -11,7 +11,7 @@
 [![AppVeyor](https://img.shields.io/appveyor/build/christophebedard/dco-check?label=CI&logo=appveyor)](https://ci.appveyor.com/project/christophebedard/dco-check)
 [![CircleCI](https://img.shields.io/circleci/build/github/christophebedard/dco-check?label=CI&logo=circle&logoColor=white)](https://circleci.com/gh/christophebedard/dco-check)
 
-Simple DCO check script to be used in any CI.
+Simple DCO check script to be used in [any CI](#ci-support).
 
 ## Motivation
 
@@ -55,26 +55,28 @@ Those options can alternatively be set through environment variables (see `--hel
 `dco-check` focuses on two use-cases:
 
 1. Commits part of a feature branch, i.e. a proposed change (pull request or merge request)
-1. Commits on the default branch, e.g. `master`, more specifically the new commits pushed to the default branch
+1. Commits on the default branch, e.g. `master`, or more specifically the new commits pushed to the default branch
 
 The first use-case is easy to cover given a normal git repository.
-We can simply use `git merge-base --fork-point $DEFAULT_BRANCH` to get the list of commits on a specific feature branch.
+We can simply use `git merge-base --fork-point $DEFAULT_BRANCH` to get the list of commits on a specific feature branch off of the default branch.
+Some CIs provide even more information, such as the target branch of the change, which is useful if we don't expect to always target the default branch.
 Then we can just check every commit using `git log` and make sure it is signed-off by the author.
 
-The second use-case isn't really possible, because a git repository does not contain the necessary information (AFAIK).
+The second use-case isn't really possible with simple git repositories, because they do not contain the necessary information (AFAIK).
 Fortunately, some CIs do provide this information.
 
 Furthermore, by default, some CI platforms only clone git repositories up to a specific depth, i.e. you only get a partial commit history.
-This depth can sometimes be 1 for some CIs.
+This depth can sometimes be 1 for some CIs, i.e. a shallow clone.
 For those cases, it is usually possible to prevent shallow cloning by setting the right parameter(s) in the job configuration.
 However, since one of the goals of `dco-check` is to be as easy to use as possible, it tries not to rely on that.
 
 This is why `dco-check` detects the current CI platform and uses whatever information that platform can provide.
 Otherwise, it falls back on a default generic implementation which uses simple git commands.
+In those cases, the CLI options allow users to provide a lot of the missing information.
 
 ## CI support
 
-Below is a summary of the supported CIs along with their known behaviour.
+Below is a summary of the supported CIs along with their known behaviours.
 
 | CI | Detects new changes when pushing to default branch | Detects PRs/MRs | Gets base branch using | Gets default branch using | Notes |
 |:--:|:--------------------------------------------------:|:---------------:|:----------------------:|:-------------------------:|:-----:|
@@ -91,4 +93,4 @@ Below is a summary of the supported CIs along with their known behaviour.
 ## Python version support
 
 Python 3.6+ is required because of the use of f-strings.
-However, it shouldn't be too hard to remove them to support older versions of Python 3, if there is demand for it, or if such a change is contributed to `dco-check`.
+However, it shouldn't be too hard to remove them to support older versions of Python 3, if there is a demand for it, or if such a change is contributed to `dco-check`.
