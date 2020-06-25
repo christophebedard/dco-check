@@ -455,11 +455,11 @@ class CommitDataRetriever:
 
     def name(self) -> str:
         """Get a name that represents this retriever."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def applies(self) -> bool:
         """Check if this retriever applies, i.e. can provide commit data."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:
         """
@@ -469,11 +469,11 @@ class CommitDataRetriever:
 
         :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
         """Get commit data."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class GitRetriever(CommitDataRetriever):
