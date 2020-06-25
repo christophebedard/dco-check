@@ -505,23 +505,14 @@ class CommitDataRetriever:
 class GitRetriever(CommitDataRetriever):
     """Implementation for any git repository."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'git (default)'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         # Unless we only have access to a partial commit history
         return True
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         default_branch = options.default_branch
         logger.verbose_print(f"\tusing default branch '{default_branch}'")
         commit_hash_base = get_common_ancestor_commit_hash(default_branch)
@@ -538,8 +529,7 @@ class GitRetriever(CommitDataRetriever):
         head: str,
         check_merge_commits: bool = False,
         **kwargs,
-    ) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         ignore_merge_commits = not check_merge_commits
         commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
         individual_commits = split_commits_data(commits_data)
@@ -572,22 +562,13 @@ class GitRetriever(CommitDataRetriever):
 class GitlabRetriever(CommitDataRetriever):
     """Implementation for GitLab CI."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'GitLab'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('GITLAB_CI', print_if_not_found=False) is not None
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         default_branch = get_env_var('CI_DEFAULT_BRANCH', default=options.default_branch)
 
@@ -624,30 +605,25 @@ class GitlabRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    def get_commits(
+        self,
+        base: str,
+        head: str,
+        **kwargs,
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
 class CircleCiRetriever(CommitDataRetriever):
     """Implementation for CircleCI."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'CircleCI'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('CIRCLECI', print_if_not_found=False) is not None
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
         default_branch = options.default_branch
         logger.verbose_print(f"\tusing default branch '{default_branch}'")
@@ -679,30 +655,25 @@ class CircleCiRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    def get_commits(
+        self,
+        base: str,
+        head: str,
+        **kwargs,
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
 class AzurePipelinesRetriever(CommitDataRetriever):
     """Implementation for Azure Pipelines."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'Azure Pipelines'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('TF_BUILD', print_if_not_found=False) is not None
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables  # noqa: E501
         default_branch = options.default_branch
         logger.verbose_print(f"\tusing default branch '{default_branch}'")
@@ -758,30 +729,25 @@ class AzurePipelinesRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    def get_commits(
+        self,
+        base: str,
+        head: str,
+        **kwargs,
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
 class AppVeyorRetriever(CommitDataRetriever):
     """Implementation for AppVeyor."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'AppVeyor'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('APPVEYOR', print_if_not_found=False) is not None
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://www.appveyor.com/docs/environment-variables/
         default_branch = options.default_branch
         logger.verbose_print(f"\tusing default branch '{default_branch}'")
@@ -818,30 +784,25 @@ class AppVeyorRetriever(CommitDataRetriever):
                 return None
             return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    def get_commits(
+        self,
+        base: str,
+        head: str,
+        **kwargs,
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         return GitRetriever().get_commits(base, head, **kwargs)
 
 
 class GitHubRetriever(CommitDataRetriever):
     """Implementation for GitHub CI."""
 
-    def name(self) -> str:
-        """Get a name that represents this retriever."""
+    def name(self) -> str:  # noqa: D102
         return 'GitHub CI'
 
-    def applies(self) -> bool:
-        """Check if this retriever applies, i.e. can provide commit data."""
+    def applies(self) -> bool:  # noqa: D102
         return get_env_var('GITHUB_ACTIONS', print_if_not_found=False) == 'true'
 
-    def get_commit_range(self) -> Optional[Tuple[str, str]]:
-        """
-        Get the range of commits to be checked: (last commit that was checked, latest commit).
-
-        The range excludes the first commit, e.g. ]first commit, second commit]
-
-        :return the (last commit that was checked, latest commit) tuple, or `None` if it failed
-        """
+    def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         self.github_token = get_env_var('GITHUB_TOKEN')
         if self.github_token is None:
@@ -892,8 +853,12 @@ class GitHubRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
-        """Get commit data."""
+    def get_commits(
+        self,
+        base: str,
+        head: str,
+        **kwargs,
+    ) -> Optional[List[CommitInfo]]:  # noqa: D102
         # Request commit data
         compare_url_template = self.event_payload['repository']['compare_url']
         compare_url = compare_url_template.format(base=base, head=head)
