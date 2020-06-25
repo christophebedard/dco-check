@@ -600,6 +600,19 @@ class GitlabRetriever(GitRetriever):
             if target_branch_sha is None:
                 return None
             return target_branch_sha, commit_hash_head
+        elif get_env_var('CI_EXTERNAL_PULL_REQUEST_IID', print_if_not_found=False):
+            # Get external merge request target branch
+            target_branch = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME')
+            if target_branch is None:
+                return None
+            logger.verbose_print(
+                f"\ton merge request branch '{current_branch}': "
+                f"will check new commits off of target branch '{target_branch}'"
+            )
+            target_branch_sha = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_SHA')
+            if target_branch_sha is None:
+                return None
+            return target_branch_sha, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
             logger.verbose_print(
