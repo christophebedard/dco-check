@@ -304,32 +304,6 @@ def get_common_ancestor_commit_hash(
     return run(command)
 
 
-def get_default_branch_from_remote(
-    remote: str,
-) -> Optional[str]:
-    """
-    Get default branch from remote.
-
-    :param remote: the remote name
-    :return: the default branch, or None if it failed
-    """
-    # https://stackoverflow.com/questions/28666357/git-how-to-get-default-branch#comment92366240_50056710  # noqa: E501
-    #   $ git remote show origin
-    cmd = ['git', 'remote', 'show', remote]
-    result = run(cmd)
-    if not result:
-        return None
-    result_lines = result.split('\n')
-    branch = None
-    for result_line in result_lines:
-        # There is a two-space indentation
-        match = re.match('  HEAD branch: (.*)', result_line)
-        if match is not None:
-            branch = match[1]
-            break
-    return branch
-
-
 def fetch_branch(
     branch: str,
     remote: str = 'origin',
