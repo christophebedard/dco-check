@@ -644,7 +644,6 @@ class CircleCiRetriever(GitRetriever):
         #   https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
         base_revision = get_env_var('CIRCLE_BASE_REVISION', print_if_not_found=False)
         if base_revision:
-            # TODO: check if this allows us to check new commits pushed to master
             logger.verbose_print(
                 f"\tchecking commits off of base revision '{base_revision}'"
             )
