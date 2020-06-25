@@ -587,6 +587,19 @@ class GitlabRetriever(GitRetriever):
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
+        elif get_env_var('CI_MERGE_REQUEST_ID', print_if_not_found=False):
+            # Get merge request target branch
+            target_branch = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_NAME')
+            if target_branch is None:
+                return None
+            logger.verbose_print(
+                f"\ton merge request branch '{current_branch}': "
+                f"will check new commits off of target branch '{target_branch}'"
+            )
+            target_branch_sha = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_SHA')
+            if target_branch_sha is None:
+                return None
+            return target_branch_sha, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
             logger.verbose_print(
@@ -693,7 +706,6 @@ class AzurePipelinesRetriever(GitRetriever):
             )
             base_branch = target_branch
         else:
-            # TODO support testing only new commits on the default branch
             # Test all commits off of the default branch
             default_branch = options.default_branch
             logger.verbose_print(
