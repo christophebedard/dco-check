@@ -18,13 +18,9 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from dco_check.dco_check import BooleanDefaultValue
 from dco_check.dco_check import get_parser
-from dco_check.dco_check import is_default_value
 from dco_check.dco_check import Options
 from dco_check.dco_check import parse_args
-from dco_check.dco_check import StringDefaultValue
-from dco_check.dco_check import wrap_default_value
 
 
 class TestOptionsArgs(unittest.TestCase):
@@ -42,22 +38,6 @@ class TestOptionsArgs(unittest.TestCase):
             self.assertEqual(True, args.verbose)
             self.assertEqual('my-default-branch', args.default_branch)
 
-    def test_default_value_utils(self) -> None:
-        self.assertFalse(is_default_value('mystr'))
-
-        wrapped = wrap_default_value('mystr')
-        self.assertTrue(is_default_value(wrapped))
-        self.assertEqual('mystr', str(wrapped))
-
-        # Double wrap
-        with self.assertRaises(ValueError):
-            wrap_default_value(wrapped)
-
-        # int is not a supported type right now
-        self.assertFalse(is_default_value(123))
-        with self.assertRaises(BaseException):
-            wrap_default_value(123)
-
     def test_options_basic(self) -> None:
         options = Options(get_parser())
         ns = argparse.Namespace(
@@ -74,76 +54,82 @@ class TestOptionsArgs(unittest.TestCase):
         self.assertEqual(True, options.quiet)
         self.assertEqual(False, options.verbose)
 
-    def test_options_default(self) -> None:
-        ns_default = argparse.Namespace(
-            check_merge_commits=BooleanDefaultValue(False),
-            default_branch=StringDefaultValue('b'),
-            default_remote=StringDefaultValue('c'),
-            quiet=BooleanDefaultValue(False),
-            verbose=BooleanDefaultValue(False),
-        )
+    @staticmethod
+    def reset_environment() -> None:
+        env_vars = [
+            'DCO_CHECK_CHECK_MERGE_COMMITS',
+            'DCO_CHECK_DEFAULT_BRANCH',
+            'DCO_CHECK_DEFAULT_REMOTE',
+            'DCO_CHECK_QUIET',
+            'DCO_CHECK_VERBOSE',
+        ]
+        for env_var in env_vars:
+            if env_var in os.environ:
+                del os.environ[env_var]
 
-        # Default arg values
-        options = Options(get_parser())
-        options.set_options(ns_default)
-        self.assertEqual(False, bool(options.check_merge_commits))
-        self.assertEqual('b', options.default_branch)
-        self.assertEqual('c', options.default_remote)
-        self.assertEqual(False, bool(options.quiet))
-        self.assertEqual(False, bool(options.verbose))
-
+    def test_args_default(self) -> None:
         # Set options through env vars
-        os.environ['DCO_CHECK_CHECK_MERGE_COMMITS'] = 'True'
+        self.reset_environment()
+        os.environ['DCO_CHECK_CHECK_MERGE_COMMITS'] = 'yessss'
         os.environ['DCO_CHECK_DEFAULT_BRANCH'] = 'adefaultbranch'
         os.environ['DCO_CHECK_DEFAULT_REMOTE'] = 'adefaultremote'
         os.environ['DCO_CHECK_QUIET'] = 'True'
-        os.environ['DCO_CHECK_VERBOSE'] = 'False'
-        options.apply_env_vars()
-        self.assertEqual(True, options.check_merge_commits)
-        self.assertEqual('adefaultbranch', options.default_branch)
-        self.assertEqual('adefaultremote', options.default_remote)
-        self.assertEqual(True, options.quiet)
-        self.assertEqual(False, options.verbose)
+        # os.environ['DCO_CHECK_VERBOSE'] = 'False'
+        test_argv = ['dco_check/dco_check.py']
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            options = Options(get_parser())
+            options.set_options(args)
+            self.assertEqual(True, options.check_merge_commits)
+            self.assertEqual('adefaultbranch', options.default_branch)
+            self.assertEqual('adefaultremote', options.default_remote)
+            self.assertEqual(True, options.quiet)
+            self.assertEqual(False, options.verbose)
 
-        # Set options through env vars but use non-default args which should override
-        options = Options(get_parser())
-        options.set_options(ns_default)
-        self.assertEqual(False, bool(options.check_merge_commits))
-        self.assertEqual('b', options.default_branch)
-        self.assertEqual('c', options.default_remote)
-        self.assertEqual(False, bool(options.quiet))
-        self.assertEqual(False, bool(options.verbose))
-
-        os.environ['DCO_CHECK_CHECK_MERGE_COMMITS'] = 'False'
+        # Set options through env vars but use some non-default args which should override
+        self.reset_environment()
+        os.environ['DCO_CHECK_CHECK_MERGE_COMMITS'] = 'yessss'
         os.environ['DCO_CHECK_DEFAULT_BRANCH'] = 'adefaultbranch'
         os.environ['DCO_CHECK_DEFAULT_REMOTE'] = 'adefaultremote'
-        os.environ['DCO_CHECK_QUIET'] = 'False'
-        os.environ['DCO_CHECK_VERBOSE'] = 'False'
-        options.apply_env_vars()
-        self.assertEqual(False, options.check_merge_commits)
-        self.assertEqual('adefaultbranch', options.default_branch)
-        self.assertEqual('adefaultremote', options.default_remote)
-        self.assertEqual(False, options.quiet)
-        self.assertEqual(False, options.verbose)
-
-        non_default = argparse.Namespace(
-            check_merge_commits=True,
-            default_branch='bbb',
-            default_remote='ccc',
-            quiet=False,
-            verbose=True,
-        )
-        options.set_options(non_default)
-        self.assertEqual(True, options.check_merge_commits)
-        self.assertEqual('bbb', options.default_branch)
-        self.assertEqual('ccc', options.default_remote)
-        self.assertEqual(False, options.quiet)
-        self.assertEqual(True, options.verbose)
+        os.environ['DCO_CHECK_QUIET'] = 'True'
+        # os.environ['DCO_CHECK_VERBOSE'] = 'False'
+        test_argv = [
+            'dco_check/dco_check.py',
+            '--check-merge-commits',  # Same value
+            '--default-remote',
+            'someremote',
+        ]
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            options = Options(get_parser())
+            options.set_options(args)
+            self.assertEqual(True, options.check_merge_commits)
+            self.assertEqual('adefaultbranch', options.default_branch)
+            self.assertEqual('someremote', options.default_remote)
+            self.assertEqual(True, options.quiet)
+            self.assertEqual(False, options.verbose)
 
         # Raises if both quiet and verbose are enabled
-        options = Options(get_parser())
-        options.set_options(ns_default)
+        self.reset_environment()
         os.environ['DCO_CHECK_QUIET'] = 'True'
-        os.environ['DCO_CHECK_VERBOSE'] = 'True'
-        with self.assertRaises(ValueError):
-            options.apply_env_vars()
+        # os.environ['DCO_CHECK_VERBOSE'] = 'False'
+        test_argv = [
+            'dco_check/dco_check.py',
+            '--verbose',
+        ]
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            options = Options(get_parser())
+            with self.assertRaises(ValueError):
+                options.set_options(args)
+
+        self.reset_environment()
+        os.environ['DCO_CHECK_QUIET'] = ''
+        os.environ['DCO_CHECK_VERBOSE'] = 'anything means True, even empty'
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            options = Options(get_parser())
+            with self.assertRaises(ValueError):
+                options.set_options(args)
+
+        self.reset_environment()
