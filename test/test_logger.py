@@ -33,6 +33,7 @@ class TestLogger(unittest.TestCase):
         ns = argparse.Namespace(
             check_merge_commits=False,
             default_branch='b',
+            default_branch_from_remote=False,
             default_remote='c',
             quiet=False,
             verbose=False,
@@ -55,6 +56,7 @@ class TestLogger(unittest.TestCase):
         ns = argparse.Namespace(
             check_merge_commits=False,
             default_branch='b',
+            default_branch_from_remote=False,
             default_remote='c',
             quiet=False,
             verbose=True,
@@ -69,6 +71,7 @@ class TestLogger(unittest.TestCase):
         ns = argparse.Namespace(
             check_merge_commits=False,
             default_branch='b',
+            default_branch_from_remote=False,
             default_remote='c',
             quiet=True,
             verbose=False,

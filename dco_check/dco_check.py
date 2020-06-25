@@ -36,6 +36,7 @@ DEFAULT_BRANCH = 'master'
 DEFAULT_REMOTE = 'origin'
 ENV_VAR_CHECK_MERGE_COMMITS = 'DCO_CHECK_CHECK_MERGE_COMMITS'
 ENV_VAR_DEFAULT_BRANCH = 'DCO_CHECK_DEFAULT_BRANCH'
+ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE = 'DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE'
 ENV_VAR_DEFAULT_REMOTE = 'DCO_CHECK_DEFAULT_REMOTE'
 ENV_VAR_QUIET = 'DCO_CHECK_QUIET'
 ENV_VAR_VERBOSE = 'DCO_CHECK_VERBOSE'
@@ -111,12 +112,21 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='Check that all commits of a proposed change have a DCO, i.e. are signed-off.',
     )
-    parser.add_argument(
+    default_branch_group = parser.add_mutually_exclusive_group()
+    default_branch_group.add_argument(
         '-b', '--default-branch', metavar='BRANCH',
         action=EnvDefaultOption, env_var=ENV_VAR_DEFAULT_BRANCH,
         default=DEFAULT_BRANCH,
         help=(
             'default branch to use, if necessary (default: %(default)s)'
+        ),
+    )
+    default_branch_group.add_argument(
+        '--default-branch-from-remote',
+        action=EnvDefaultStoreTrue, env_var=ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE,
+        default=False,
+        help=(
+            'get the default branch value from the remote (default: %(default)s)'
         ),
     )
     parser.add_argument(
@@ -173,6 +183,7 @@ class Options:
         """Create using default argument values."""
         self.check_merge_commits = parser.get_default('m')
         self.default_branch = parser.get_default('b')
+        self.default_branch_from_remote = parser.get_default('default-branch-from-remote')
         self.default_remote = parser.get_default('r')
         self.quiet = parser.get_default('q')
         self.verbose = parser.get_default('v')
@@ -181,6 +192,7 @@ class Options:
         """Set options using parsed arguments."""
         self.check_merge_commits = args.check_merge_commits
         self.default_branch = args.default_branch
+        self.default_branch_from_remote = args.default_branch_from_remote
         self.default_remote = args.default_remote
         self.quiet = args.quiet
         self.verbose = args.verbose
@@ -190,7 +202,14 @@ class Options:
         if self.quiet and self.verbose:
             # Similar message to what is printed when using args for both
             get_parser().print_usage()
-            print("'quiet' and 'verbose' cannot both be true")
+            print("options '--quiet' and '--verbose' cannot both be true")
+            sys.exit(1)
+        if self.default_branch != DEFAULT_BRANCH and self.default_branch_from_remote:
+            # Similar message to what is printed when using args for both
+            get_parser().print_usage()
+            print(
+                "options '--default-branch' and '--default-branch-from-remote' cannot both be set"
+            )
             sys.exit(1)
 
     def get_options(self) -> Dict:
@@ -325,6 +344,32 @@ def fetch_branch(
     ]
     # We don't want the output
     return 0 if run(command) is not None else 1
+
+
+def get_default_branch_from_remote(
+    remote: str,
+) -> Optional[str]:
+    """
+    Get default branch from remote.
+
+    :param remote: the remote name
+    :return: the default branch, or None if it failed
+    """
+    # https://stackoverflow.com/questions/28666357/git-how-to-get-default-branch#comment92366240_50056710  # noqa: E501
+    #   $ git remote show origin
+    cmd = ['git', 'remote', 'show', remote]
+    result = run(cmd)
+    if not result:
+        return None
+    result_lines = result.split('\n')
+    branch = None
+    for result_line in result_lines:
+        # There is a two-space indentation
+        match = re.match('  HEAD branch: (.*)', result_line)
+        if match is not None:
+            branch = match[1]
+            break
+    return branch
 
 
 def get_commits_data(
@@ -1000,6 +1045,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             commit_retriever = retriever
             break
     logger.print('Detected:', commit_retriever.name())
+
+    # Get default branch from remote if enabled
+    if options.default_branch_from_remote:
+        remote_default_branch = get_default_branch_from_remote(options.default_remote)
+        if remote_default_branch is None:
+            logger.print('Could not get default branch from remote')
+            return 1
+        options.default_branch = remote_default_branch
+        logger.print(f"\tgot default branch '{remote_default_branch}' from remote")
 
     # Get range of commits
     commit_range = commit_retriever.get_commit_range()

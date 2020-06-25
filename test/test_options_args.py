@@ -38,11 +38,18 @@ class TestOptionsArgs(unittest.TestCase):
             self.assertEqual(True, args.verbose)
             self.assertEqual('my-default-branch', args.default_branch)
 
+        test_argv = ['dco_check/dco_check.py', '-q', '-r', 'myawesomeremote']
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            self.assertEqual(True, args.quiet)
+            self.assertEqual('myawesomeremote', args.default_remote)
+
     def test_options_basic(self) -> None:
         options = Options(get_parser())
         ns = argparse.Namespace(
             check_merge_commits=True,
             default_branch='b',
+            default_branch_from_remote=False,
             default_remote='c',
             quiet=True,
             verbose=False,
@@ -50,6 +57,7 @@ class TestOptionsArgs(unittest.TestCase):
         options.set_options(ns)
         self.assertEqual(True, options.check_merge_commits)
         self.assertEqual('b', options.default_branch)
+        self.assertEqual(False, options.default_branch_from_remote)
         self.assertEqual('c', options.default_remote)
         self.assertEqual(True, options.quiet)
         self.assertEqual(False, options.verbose)
@@ -61,6 +69,7 @@ class TestOptionsArgs(unittest.TestCase):
         env_vars = [
             'DCO_CHECK_CHECK_MERGE_COMMITS',
             'DCO_CHECK_DEFAULT_BRANCH',
+            'DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE',
             'DCO_CHECK_DEFAULT_REMOTE',
             'DCO_CHECK_QUIET',
             'DCO_CHECK_VERBOSE',
@@ -128,6 +137,30 @@ class TestOptionsArgs(unittest.TestCase):
         self.reset_environment()
         os.environ['DCO_CHECK_QUIET'] = ''
         os.environ['DCO_CHECK_VERBOSE'] = 'anything means True, even empty'
+        test_argv = ['dco_check/dco_check.py']
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            options = Options(get_parser())
+            with self.assertRaises(SystemExit):
+                options.set_options(args)
+
+        # Exits if both --default-branch and --default-branch-from-remote are set to non-default
+        self.reset_environment()
+        os.environ['DCO_CHECK_DEFAULT_BRANCH'] = 'will evaluate to True'
+        test_argv = [
+            'dco_check/dco_check.py',
+            '--default-branch-from-remote',
+        ]
+        with patch.object(sys, 'argv', test_argv):
+            args = parse_args()
+            options = Options(get_parser())
+            with self.assertRaises(SystemExit):
+                options.set_options(args)
+
+        self.reset_environment()
+        os.environ['DCO_CHECK_DEFAULT_BRANCH'] = '69'
+        os.environ['DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE'] = '42'
+        test_argv = ['dco_check/dco_check.py']
         with patch.object(sys, 'argv', test_argv):
             args = parse_args()
             options = Options(get_parser())
