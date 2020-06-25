@@ -29,5 +29,5 @@ class TestDcoCheck(unittest.TestCase):
         self.assertEqual(0, main(['-v']))
 
     def test_get_default_branch_from_remote(self) -> None:
-        remote_default_branch = get_default_branch_from_remote('origin')
-        self.assertEqual('master', remote_default_branch)
+        self.assertEqual('master', get_default_branch_from_remote('origin'))
+        self.assertIsNone(get_default_branch_from_remote('this-remote-does-not-exist'))
