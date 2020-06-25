@@ -80,8 +80,8 @@ Below is a summary of the supported CIs along with their known behaviour.
 |:--:|:--------------------------------------------------:|:----------------------:|:-----:|
 |GitHub|✓|CI|retrieves commit data using the GitHub API, since GitHub does shallow clones by default|
 |GitLab|✓|CI|detects normal GitLab MRs and external (GitHub) MRs|
-|Azure Pipelines||CLI arguments||
-|AppVeyor|✓|CLI arguments||
+|Azure Pipelines||CI||
+|AppVeyor||CI||
 |CircleCI|?|CLI arguments|can use base revision information if provided (see example)|
 |Travis CI||CLI arguments|supported by default as a normal git repo|
 |default (git)||CLI arguments|use locally; using in an unsupported CI which only does a shallow clone might cause problems|

@@ -725,36 +725,42 @@ class AppVeyorRetriever(GitRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://www.appveyor.com/docs/environment-variables/
         default_branch = options.default_branch
-        logger.verbose_print(f"\tusing default branch '{default_branch}'")
 
-        commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT')
+        commit_hash_head = get_env_var('APPVEYOR_REPO_COMMIT')
         if commit_hash_head is None:
             commit_hash_head = get_head_commit_hash()
+            if commit_hash_head is None:
+                return None
 
-        # If we're on the default branch, just test new commits
-        current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
-        if current_branch is not None and current_branch == default_branch:
+        branch = get_env_var('APPVEYOR_REPO_BRANCH')
+        if branch is None:
+            return None
+
+        # Check if merge request
+        if get_env_var('APPVEYOR_PULL_REQUEST_NUMBER', print_if_not_found=False):
+            current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
+            if current_branch is None:
+                return None
+            target_branch = branch
             logger.verbose_print(
-                f"\ton default branch '{current_branch}': will check new commits"
+                f"\ton merge request branch '{current_branch}': "
+                f"will check commits off of target branch '{target_branch}'"
             )
-            commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
+            commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT') or commit_hash_head
+            if commit_hash_head is None:
+                return None
+            commit_hash_base = get_common_ancestor_commit_hash(target_branch)
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
         else:
             # Otherwise test all commits off of the default branch
+            current_branch = branch
             logger.verbose_print(
                 f"\ton branch '{current_branch}': "
                 f"will check forked commits off of default branch '{default_branch}'"
             )
-            # Fetch default branch
-            remote = options.default_remote
-            if 0 != fetch_branch(default_branch, remote):
-                logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
-                return None
-            # Use remote default branch ref
-            remote_branch_ref = remote + '/' + default_branch
-            commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
+            commit_hash_base = get_common_ancestor_commit_hash(default_branch)
             if commit_hash_base is None:
                 return None
             return commit_hash_base, commit_hash_head
