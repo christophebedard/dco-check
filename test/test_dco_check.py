@@ -14,6 +14,7 @@
 
 import unittest
 
+from dco_check.dco_check import get_default_branch_from_remote
 from dco_check.dco_check import main
 
 
@@ -26,3 +27,7 @@ class TestDcoCheck(unittest.TestCase):
 
     def test_main(self) -> None:
         self.assertEqual(0, main(['-v']))
+
+    def test_get_default_branch_from_remote(self) -> None:
+        remote_default_branch = get_default_branch_from_remote('origin')
+        self.assertEqual('master', remote_default_branch)
