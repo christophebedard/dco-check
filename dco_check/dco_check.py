@@ -631,6 +631,8 @@ class CircleCiRetriever(GitRetriever):
         #   https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
         base_revision = get_env_var('CIRCLE_BASE_REVISION', print_if_not_found=False)
         if base_revision:
+            # For PRs, this is the commit of the base branch,
+            # and, for pushes to a branch, this is the commit before the new commits
             logger.verbose_print(
                 f"\tchecking commits off of base revision '{base_revision}'"
             )
