@@ -27,7 +27,6 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 
 __version__ = '0.0.6'
@@ -43,46 +42,68 @@ ENV_VAR_VERBOSE = 'DCO_CHECK_VERBOSE'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 
-class BooleanDefaultValue:
-    """Default value wrapper for bool."""
+class EnvDefaultOption(argparse.Action):
+    """
+    Action that uses an env var value as the default if it exists.
 
-    def __init__(self, value):  # noqa: D107
-        assert(isinstance(value, bool))
-        self._value = value
+    Inspired by: https://stackoverflow.com/a/10551190/6476709
+    """
 
-    def __bool__(self):  # noqa: D105
-        return self._value
+    def __init__(
+        self,
+        env_var: str,
+        default: Any,
+        help=None,  # noqa: A002
+        **kwargs,
+    ) -> None:
+        """Create a EnvDefaultOption."""
+        # Set default to env var value if it exists
+        if env_var in os.environ:
+            default = os.environ[env_var]
+        if help:  # pragma: no cover
+            help += f' [env var: {env_var}]'
+        super(EnvDefaultOption, self).__init__(
+            default=default,
+            help=help,
+            **kwargs,
+        )
 
-
-class StringDefaultValue(str):
-    """Default value wrapper for str."""
-
-    pass
-
-
-_types = {
-    bool: BooleanDefaultValue,
-    str: StringDefaultValue,
-}
-
-
-def wrap_default_value(
-    value: Union[bool, str],
-) -> Union[BooleanDefaultValue, StringDefaultValue, Any]:
-    """Wrap a default value so that we can check if a value is still the default."""
-    # Inspired by: https://github.com/colcon/colcon-core/pull/288/files
-    global _types
-    if is_default_value(value):
-        raise ValueError('tried to wrap a default value a second time')
-    if type(value) not in _types:
-        raise ValueError(f"type '{value.__class__.__name__}' is not supported")
-    return _types[type(value)](value)
+    def __call__(self, parser, namespace, values, option_string=None):  # noqa
+        setattr(namespace, self.dest, values)
 
 
-def is_default_value(value: Any) -> bool:
-    """Check if a value is a default value."""
-    global _types
-    return isinstance(value, tuple(_types.values()))
+class EnvDefaultStoreTrue(argparse.Action):
+    """
+    Action similar to 'store_true' that uses an env var value as the default if it exists.
+
+    Partly copied from arparse.{_StoreConstAction,_StoreTrueAction}.
+    """
+
+    def __init__(
+        self,
+        option_strings,
+        dest,
+        env_var: str,
+        default: bool = False,
+        help=None,  # noqa: A002
+    ) -> None:
+        """Create a EnvDefaultStoreTrue."""
+        # Set default value to true if the env var exists
+        default = env_var in os.environ
+        if help:  # pragma: no cover
+            help += f' [env var: {env_var} (set to anything)]'
+        super(EnvDefaultStoreTrue, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=0,
+            const=True,
+            default=default,
+            required=False,
+            help=help,
+        )
+
+    def __call__(self, parser, namespace, values, option_string=None):  # noqa
+        setattr(namespace, self.dest, self.const)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -92,46 +113,44 @@ def get_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '-b', '--default-branch', metavar='BRANCH',
-        default=wrap_default_value(DEFAULT_BRANCH),
+        action=EnvDefaultOption, env_var=ENV_VAR_DEFAULT_BRANCH,
+        default=DEFAULT_BRANCH,
         help=(
-            'default branch to use, if necessary (default: %(default)s) '
-            f'(environment variable: {ENV_VAR_DEFAULT_BRANCH})'
+            'default branch to use, if necessary (default: %(default)s)'
         ),
     )
     parser.add_argument(
         '-m', '--check-merge-commits',
-        action='store_true',
-        default=wrap_default_value(False),
+        action=EnvDefaultStoreTrue, env_var=ENV_VAR_CHECK_MERGE_COMMITS,
+        default=False,
         help=(
-            'check sign-offs on merge commits as well '
-            f'(environment variable: {ENV_VAR_CHECK_MERGE_COMMITS})'
+            'check sign-offs on merge commits as well (default: %(default)s)'
         ),
     )
     parser.add_argument(
         '-r', '--default-remote', metavar='REMOTE',
-        default=wrap_default_value(DEFAULT_REMOTE),
+        action=EnvDefaultOption, env_var=ENV_VAR_DEFAULT_REMOTE,
+        default=DEFAULT_REMOTE,
         help=(
-            'default remote to use, if necessary (default: %(default)s) '
-            f'(environment variable: {ENV_VAR_DEFAULT_REMOTE})'
+            'default remote to use, if necessary (default: %(default)s)'
         ),
     )
     output_options_group = parser.add_mutually_exclusive_group()
     output_options_group.add_argument(
         '-q', '--quiet',
-        action='store_true',
-        default=wrap_default_value(False),
+        action=EnvDefaultStoreTrue, env_var=ENV_VAR_QUIET,
+        default=False,
         help=(
             'quiet mode (do not print anything; simply exit with 0 or non-zero) '
-            f'(environment variable: {ENV_VAR_QUIET})'
+            '(default: %(default)s)'
         ),
     )
     output_options_group.add_argument(
         '-v', '--verbose',
-        action='store_true',
-        default=wrap_default_value(False),
+        action=EnvDefaultStoreTrue, env_var=ENV_VAR_VERBOSE,
+        default=False,
         help=(
-            'verbose mode (print out more information) '
-            f'(environment variable: {ENV_VAR_VERBOSE})'
+            'verbose mode (print out more information) (default: %(default)s)'
         ),
     )
     return parser
@@ -165,59 +184,18 @@ class Options:
         self.default_remote = args.default_remote
         self.quiet = args.quiet
         self.verbose = args.verbose
-
-    def apply_env_vars(self) -> None:
-        """
-        Apply environment variable values.
-
-        Only uses an environment variable value if the argument has not been set through CLI.
-        """
-        def real_cast(value: Any, param_type: Any) -> Any:
-            """Because bool('False') is True."""
-            if param_type is bool:
-                return value in [1, '1', 'true', 'True', 'y', 'Y', 'yes', 'Yes']
-            return param_type(value)
-
-        def environment_value_if_default_param(
-            param_name: str,
-            param_type: Any,
-            env_var_name: str,
-        ) -> Optional[Any]:  # pragma: no cover
-            """
-            Choose value between environment variable and CLI argument.
-
-            Returns environment variable value if it exists and the parameter has a default value.
-            """
-            if not hasattr(self, param_name):
-                raise ValueError('parameter name does not exist')
-            value = getattr(self, param_name)
-            # Use environment variable value if it exists, otherwise keep default value
-            if is_default_value(value):
-                return real_cast(
-                    get_env_var(env_var_name, print_if_not_found=False, default=value),
-                    param_type,
-                )
-            else:
-                return real_cast(value, param_type)
-        self.check_merge_commits = environment_value_if_default_param(
-            'check_merge_commits',
-            bool,
-            ENV_VAR_CHECK_MERGE_COMMITS,
-        )
-        self.default_branch = environment_value_if_default_param(
-            'default_branch',
-            str,
-            ENV_VAR_DEFAULT_BRANCH,
-        )
-        self.default_remote = environment_value_if_default_param(
-            'default_remote',
-            str,
-            ENV_VAR_DEFAULT_REMOTE,
-        )
-        self.quiet = environment_value_if_default_param('quiet', bool, ENV_VAR_QUIET)
-        self.verbose = environment_value_if_default_param('verbose', bool, ENV_VAR_VERBOSE)
+        # Shouldn't happen with a mutually exclusive group,
+        # but can happen if one is set with an env var
+        # and the other is set with an arg
         if self.quiet and self.verbose:
-            raise ValueError("'quiet' and 'verbose' cannot both be true")
+            # Similar message to what is printed when using args for both
+            get_parser().print_usage()
+            print("'quiet' and 'verbose' cannot both be true")
+            sys.exit(1)
+
+    def get_options(self) -> Dict:
+        """Get all options as a dict."""
+        return self.__dict__
 
 
 options = Options(get_parser())
@@ -1000,8 +978,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     """
     args = parse_args(argv)
     options.set_options(args)
-    options.apply_env_vars()
     logger.set_options(options)
+
+    # Print options
+    if options.verbose:
+        logger.verbose_print('Options:')
+        for name, value in options.get_options().items():
+            logger.verbose_print(f'\t{name}: {str(value)}')
+        logger.verbose_print()
 
     # Detect CI
     # Use first one that applies
