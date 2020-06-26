@@ -609,9 +609,13 @@ class GitlabRetriever(GitRetriever):
         if commit_hash_head is None:
             return None
 
-        # If we're on the default branch, just test new commits
         current_branch = get_env_var('CI_COMMIT_BRANCH')
-        if current_branch is not None and current_branch == default_branch:
+        if get_env_var('CI_PIPELINE_SOURCE') == 'schedule':
+            # Do not check scheduled pipelines
+            logger.verbose_print("\ton scheduled pipeline: won't check commits")
+            return commit_hash_head, commit_hash_head
+        elif current_branch is not None and current_branch == default_branch:
+            # If we're on the default branch, just test new commits
             logger.verbose_print(
                 f"\ton default branch '{current_branch}': "
                 'will check new commits'
