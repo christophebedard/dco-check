@@ -441,6 +441,20 @@ def extract_name_and_email(
     return match.group(1), match.group(2)
 
 
+def format_name_and_email(
+    name: str,
+    email: str,
+) -> str:
+    """
+    Format a name and a email into a 'name <email>' string.
+
+    :param name: the name
+    :param email: the email
+    :return: the formatted string
+    """
+    return f"{name or 'N/A'} <{email or 'N/A'}>"
+
+
 def get_env_var(
     env_var: str,
     print_if_not_found: bool = True,
@@ -943,7 +957,7 @@ def process_commits(
         logger.verbose_print(
             '\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else '')
         )
-        logger.verbose_print('\t' + (commit.author_name or 'N/A'), (commit.author_email or 'N/A'))
+        logger.verbose_print('\t' + format_name_and_email(commit.author_name, commit.author_email))
         logger.verbose_print('\t' + commit.title)
         logger.verbose_print('\t' + '\n\t'.join(commit.body))
 
@@ -970,7 +984,7 @@ def process_commits(
         sign_offs_name_email: List[Tuple[str, str]] = []
         for sign_off in sign_offs:
             name, email = extract_name_and_email(sign_off)
-            logger.verbose_print('\t\t' + 'found sign-off:', name, email)
+            logger.verbose_print(f'\t\tfound sign-off: {format_name_and_email(name, email)}')
             if not is_valid_email(email):
                 infractions[commit.hash].append(f'invalid email: {email}')
             else:
