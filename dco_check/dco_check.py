@@ -57,7 +57,7 @@ class EnvDefaultOption(argparse.Action):
         help=None,  # noqa: A002
         **kwargs,
     ) -> None:
-        """Create a EnvDefaultOption."""
+        """Create an EnvDefaultOption."""
         # Set default to env var value if it exists
         if env_var in os.environ:
             default = os.environ[env_var]
@@ -88,7 +88,7 @@ class EnvDefaultStoreTrue(argparse.Action):
         default: bool = False,
         help=None,  # noqa: A002
     ) -> None:
-        """Create a EnvDefaultStoreTrue."""
+        """Create an EnvDefaultStoreTrue."""
         # Set default value to true if the env var exists
         default = env_var in os.environ
         if help:  # pragma: no cover
@@ -366,7 +366,7 @@ def get_default_branch_from_remote(
     for result_line in result_lines:
         # There is a two-space indentation
         match = re.match('  HEAD branch: (.*)', result_line)
-        if match is not None:
+        if match:
             branch = match[1]
             break
     return branch
@@ -436,7 +436,7 @@ def extract_name_and_email(
     :return: the extracted (name, email) tuple, or `None` if it failed
     """
     match = re.search('(.*) <(.*)>', name_and_email)
-    if match is None:
+    if not match:
         return None
     return match.group(1), match.group(2)
 
@@ -549,10 +549,10 @@ class GitRetriever(CommitDataRetriever):
         default_branch = options.default_branch
         logger.verbose_print(f"\tusing default branch '{default_branch}'")
         commit_hash_base = get_common_ancestor_commit_hash(default_branch)
-        if commit_hash_base is None:
+        if not commit_hash_base:
             return None
         commit_hash_head = get_head_commit_hash()
-        if commit_hash_head is None:
+        if not commit_hash_head:
             return None
         return commit_hash_base, commit_hash_head
 
@@ -575,7 +575,7 @@ class GitRetriever(CommitDataRetriever):
             commit_body = commit_lines[3:]
             author_result = extract_name_and_email(commit_author_data)
             author_name, author_email = None, None
-            if author_result is not None:
+            if author_result:
                 author_name, author_email = author_result
             # There won't be any merge commits at this point
             is_merge_commit = False
@@ -606,7 +606,7 @@ class GitlabRetriever(GitRetriever):
         default_branch = get_env_var('CI_DEFAULT_BRANCH', default=options.default_branch)
 
         commit_hash_head = get_env_var('CI_COMMIT_SHA')
-        if commit_hash_head is None:
+        if not commit_hash_head:
             return None
 
         current_branch = get_env_var('CI_COMMIT_BRANCH')
@@ -614,40 +614,40 @@ class GitlabRetriever(GitRetriever):
             # Do not check scheduled pipelines
             logger.verbose_print("\ton scheduled pipeline: won't check commits")
             return commit_hash_head, commit_hash_head
-        elif current_branch is not None and current_branch == default_branch:
+        elif current_branch == default_branch:
             # If we're on the default branch, just test new commits
             logger.verbose_print(
                 f"\ton default branch '{current_branch}': "
                 'will check new commits'
             )
             commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
-            if commit_hash_base is None:
+            if not commit_hash_base:
                 return None
             return commit_hash_base, commit_hash_head
         elif get_env_var('CI_MERGE_REQUEST_ID', print_if_not_found=False):
             # Get merge request target branch
             target_branch = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_NAME')
-            if target_branch is None:
+            if not target_branch:
                 return None
             logger.verbose_print(
                 f"\ton merge request branch '{current_branch}': "
                 f"will check new commits off of target branch '{target_branch}'"
             )
             target_branch_sha = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_SHA')
-            if target_branch_sha is None:
+            if not target_branch_sha:
                 return None
             return target_branch_sha, commit_hash_head
         elif get_env_var('CI_EXTERNAL_PULL_REQUEST_IID', print_if_not_found=False):
             # Get external merge request target branch
             target_branch = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME')
-            if target_branch is None:
+            if not target_branch:
                 return None
             logger.verbose_print(
                 f"\ton merge request branch '{current_branch}': "
                 f"will check new commits off of target branch '{target_branch}'"
             )
             target_branch_sha = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_SHA')
-            if target_branch_sha is None:
+            if not target_branch_sha:
                 return None
             return target_branch_sha, commit_hash_head
         else:
@@ -664,7 +664,7 @@ class GitlabRetriever(GitRetriever):
             # Use remote default branch ref
             remote_branch_ref = remote + '/' + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-            if commit_hash_base is None:
+            if not commit_hash_base:
                 return None
             return commit_hash_base, commit_hash_head
 
@@ -683,7 +683,7 @@ class CircleCiRetriever(GitRetriever):
         default_branch = options.default_branch
 
         commit_hash_head = get_env_var('CIRCLE_SHA1')
-        if commit_hash_head is None:
+        if not commit_hash_head:
             return None
 
         # Check if base revision is provided to the environment, e.g.
@@ -702,7 +702,7 @@ class CircleCiRetriever(GitRetriever):
             return base_revision, commit_hash_head
         else:
             current_branch = get_env_var('CIRCLE_BRANCH')
-            if current_branch is None:
+            if not current_branch:
                 return None
             # Test all commits off of the default branch
             logger.verbose_print(
@@ -717,7 +717,7 @@ class CircleCiRetriever(GitRetriever):
             # Use remote default branch ref
             remote_branch_ref = remote + '/' + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-            if commit_hash_base is None:
+            if not commit_hash_base:
                 return None
             return commit_hash_base, commit_hash_head
 
@@ -734,10 +734,10 @@ class AzurePipelinesRetriever(GitRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables  # noqa: E501
         commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
-        if commit_hash_head is None:
+        if not commit_hash_head:
             return None
         current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
-        if current_branch is None:
+        if not current_branch:
             return None
 
         base_branch = None
@@ -749,7 +749,7 @@ class AzurePipelinesRetriever(GitRetriever):
         if is_pull_request:
             # Test all commits off of the target branch
             target_branch = get_env_var('SYSTEM_PULLREQUEST_TARGETBRANCH')
-            if target_branch is None:
+            if not target_branch:
                 return None
             logger.verbose_print(
                 f"\ton pull request branch '{current_branch}': "
@@ -773,7 +773,7 @@ class AzurePipelinesRetriever(GitRetriever):
         # Use remote default branch ref
         remote_branch_ref = remote + '/' + base_branch
         commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
-        if commit_hash_base is None:
+        if not commit_hash_base:
             return None
         return commit_hash_base, commit_hash_head
 
@@ -792,19 +792,19 @@ class AppVeyorRetriever(GitRetriever):
         default_branch = options.default_branch
 
         commit_hash_head = get_env_var('APPVEYOR_REPO_COMMIT')
-        if commit_hash_head is None:
+        if not commit_hash_head:
             commit_hash_head = get_head_commit_hash()
-            if commit_hash_head is None:
+            if not commit_hash_head:
                 return None
 
         branch = get_env_var('APPVEYOR_REPO_BRANCH')
-        if branch is None:
+        if not branch:
             return None
 
         # Check if pull request
         if get_env_var('APPVEYOR_PULL_REQUEST_NUMBER', print_if_not_found=False):
             current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
-            if current_branch is None:
+            if not current_branch:
                 return None
             target_branch = branch
             logger.verbose_print(
@@ -812,10 +812,10 @@ class AppVeyorRetriever(GitRetriever):
                 f"will check commits off of target branch '{target_branch}'"
             )
             commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT') or commit_hash_head
-            if commit_hash_head is None:
+            if not commit_hash_head:
                 return None
             commit_hash_base = get_common_ancestor_commit_hash(target_branch)
-            if commit_hash_base is None:
+            if not commit_hash_base:
                 return None
             return commit_hash_base, commit_hash_head
         else:
@@ -826,7 +826,7 @@ class AppVeyorRetriever(GitRetriever):
                 f"will check forked commits off of default branch '{default_branch}'"
             )
             commit_hash_base = get_common_ancestor_commit_hash(default_branch)
-            if commit_hash_base is None:
+            if not commit_hash_base:
                 return None
             return commit_hash_base, commit_hash_head
 
@@ -843,14 +843,14 @@ class GitHubRetriever(CommitDataRetriever):
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
         self.github_token = get_env_var('GITHUB_TOKEN')
-        if self.github_token is None:
+        if not self.github_token:
             logger.print('Did you forget to include this in your workflow config?')
             logger.print('\n\tenv:\n\t\tGITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}')
             return None
 
         # See: https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables  # noqa: E501
         event_payload_path = get_env_var('GITHUB_EVENT_PATH')
-        if event_payload_path is None:
+        if not event_payload_path:
             return None
         f = open(event_payload_path)
         self.event_payload = json.load(f)
@@ -858,7 +858,7 @@ class GitHubRetriever(CommitDataRetriever):
 
         # Get base & head commits depending on the workflow event type
         event_name = get_env_var('GITHUB_EVENT_NAME')
-        if event_name is None:
+        if not event_name:
             return None
         commit_hash_base = None
         commit_hash_head = None
@@ -966,7 +966,7 @@ def process_commits(
         logger.verbose_print('\t' + '\n\t'.join(commit.body))
 
         # Check author name and email
-        if any(d is None for d in [commit.author_name, commit.author_email]):
+        if any(not d for d in [commit.author_name, commit.author_email]):
             infractions[commit.hash].append(
                 f'could not extract author data for commit: {commit.hash}'
             )
@@ -1067,7 +1067,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Get default branch from remote if enabled
     if options.default_branch_from_remote:
         remote_default_branch = get_default_branch_from_remote(options.default_remote)
-        if remote_default_branch is None:
+        if not remote_default_branch:
             logger.print('Could not get default branch from remote')
             return 1
         options.default_branch = remote_default_branch
@@ -1075,7 +1075,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Get range of commits
     commit_range = commit_retriever.get_commit_range()
-    if commit_range is None:
+    if not commit_range:
         return 1
     commit_hash_base, commit_hash_head = commit_range
 
