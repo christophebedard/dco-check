@@ -62,7 +62,7 @@ class EnvDefaultOption(argparse.Action):
         if env_var in os.environ:
             default = os.environ[env_var]
         if help:  # pragma: no cover
-            help += f' [env var: {env_var}]'
+            help += f' [env: {env_var}]'
         super(EnvDefaultOption, self).__init__(
             default=default,
             help=help,
@@ -92,7 +92,7 @@ class EnvDefaultStoreTrue(argparse.Action):
         # Set default value to true if the env var exists
         default = env_var in os.environ
         if help:  # pragma: no cover
-            help += f' [env var: {env_var} (set to anything)]'
+            help += f' [env: {env_var} (any value to enable)]'
         super(EnvDefaultStoreTrue, self).__init__(
             option_strings=option_strings,
             dest=dest,
