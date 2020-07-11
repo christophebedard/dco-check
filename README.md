@@ -32,7 +32,7 @@ There are a few options:
     $ pip install dco-check
     $ dco-check
     ```
-1. Using the Docker image ([`christophebedard/dco-check`](https://hub.docker.com/r/christophebedard/dco-check)) with your CI
+1. Using the Docker image ([`christophebedard/dco-check`](https://hub.docker.com/r/christophebedard/dco-check)) with your CI (see [examples](#Example-CI-configurations))
     ```shell
     $ dco-check
     ```
@@ -93,7 +93,53 @@ Below is a summary of the supported CIs along with their known behaviours.
 |Travis CI|||CLI arguments|CLI arguments|supported by default as a normal git repo|
 |default (git)|||CLI arguments|CLI arguments|use locally; using in an unsupported CI which only does a shallow clone might cause problems|
 
-<!-- ## Example CI configurations -->
+## Example CI configurations
+
+Here are some example CI configurations.
+
+### GitHub
+
+```yaml
+# .github/workflows/dco.yml
+name: DCO
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+    - name: Check DCO
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        pip3 install -U dco-check
+        dco-check
+```
+
+### GitLab
+
+```yaml
+# .gitlab-ci.yml
+variables:
+  DOCKER_DRIVER: overlay2
+dco:
+  image: christophebedard/dco-check:latest
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_EXTERNAL_PULL_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == 'master'
+  script:
+    - pip3 install -U dco-check  # optional
+    - dco-check
+```
 
 ## Python version support
 
