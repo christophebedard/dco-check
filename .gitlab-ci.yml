@@ -16,10 +16,10 @@ Test:
     - codecov -t $CODECOV_TOKEN
 
 Check DCO:
-  image: python:3
+  image: christophebedard/dco-check:latest
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_EXTERNAL_PULL_REQUEST_IID
     - if: $CI_COMMIT_BRANCH == 'master'
   script:
-    - python3 dco_check/dco_check.py --verbose
+    - dco-check --verbose
