@@ -3,6 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/dco-check)](https://pypi.org/project/dco-check/)
 [![codecov](https://codecov.io/gh/christophebedard/dco-check/branch/master/graph/badge.svg)](https://codecov.io/gh/christophebedard/dco-check)
 [![License](https://img.shields.io/github/license/christophebedard/dco-check)](https://github.com/christophebedard/dco-check/blob/master/LICENSE)
+[![Docker Pulls](https://img.shields.io/docker/pulls/christophebedard/dco-check?logo=docker)](https://hub.docker.com/r/christophebedard/dco-check)
 
 [![GitHub Action Status](https://img.shields.io/github/workflow/status/christophebedard/dco-check/CI?label=CI&logo=github)](https://github.com/christophebedard/dco-check)
 [![GitLab pipeline status](https://img.shields.io/gitlab/pipeline/christophebedard/dco-check?label=CI&logo=gitlab)](https://gitlab.com/christophebedard/dco-check/commits/master)
@@ -24,11 +25,15 @@ This was inspired by the [DCO GitHub App](https://github.com/apps/dco).
 
 ## How to get & use
 
-There are two main options:
+There are a few options:
 
 1. Using the [package from PyPI](https://pypi.org/project/dco-check/)
     ```shell
     $ pip install dco-check
+    $ dco-check
+    ```
+1. Using the Docker image ([`christophebedard/dco-check`](https://hub.docker.com/r/christophebedard/dco-check)) with your CI
+    ```shell
     $ dco-check
     ```
 1. Downloading the script and running it (you can replace `master` with a specific version)
