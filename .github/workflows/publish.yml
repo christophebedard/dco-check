@@ -14,9 +14,6 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
-    - name: Check release tag vs dco_check.__version__
-      run: |
-        python3 -c "import dco_check; assert dco_check.__version__ == '${GITHUB_REF/refs\/tags\//}', 'git tag and dco_check version do not match'"
     - name: Generate package
       run: |
         python3 -m pip install --user --upgrade setuptools wheel
