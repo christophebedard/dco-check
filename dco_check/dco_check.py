@@ -622,7 +622,7 @@ class GitlabRetriever(GitRetriever):
             )
             commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
             if commit_hash_base == '0000000000000000000000000000000000000000':
-                logger.verbose_print("\tfound no new commits")
+                logger.verbose_print('\tfound no new commits')
                 return commit_hash_head, commit_hash_head
             if not commit_hash_base:
                 return None
