@@ -621,6 +621,9 @@ class GitlabRetriever(GitRetriever):
                 'will check new commits'
             )
             commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
+            if commit_hash_base == "0000000000000000000000000000000000000000":
+                # this happens in GitLab when manually launching a pipeline
+                commit_hash_base = get_common_ancestor_commit_hash(default_branch)
             if not commit_hash_base:
                 return None
             return commit_hash_base, commit_hash_head
