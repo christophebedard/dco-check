@@ -36,7 +36,8 @@ There are a few options:
     ```shell
     $ dco-check
     ```
-1. Downloading the script and running it (you can replace `master` with a specific version)
+1. Downloading the script and running it (you can replace `master` with a specific version)  
+    This is enabled by the fact that `dco-check` is a single Python file without any third-party dependencies.
     ```shell
     $ wget https://raw.githubusercontent.com/christophebedard/dco-check/master/dco_check/dco_check.py
     $ python3 dco_check.py
