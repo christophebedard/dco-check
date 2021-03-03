@@ -449,14 +449,14 @@ def extract_name_and_email(
 
 
 def format_name_and_email(
-    name: str,
-    email: str,
+    name: Optional[str],
+    email: Optional[str],
 ) -> str:
     """
     Format a name and a email into a 'name <email>' string.
 
-    :param name: the name
-    :param email: the email
+    :param name: the name, or `None` if N/A
+    :param email: the email, or `None` if N/A
     :return: the formatted string
     """
     return f"{name or 'N/A'} <{email or 'N/A'}>"
@@ -497,8 +497,8 @@ class CommitInfo:
         commit_hash: str,
         title: str,
         body: List[str],
-        author_name: str,
-        author_email: str,
+        author_name: Optional[str],
+        author_email: Optional[str],
         is_merge_commit: bool = False,
     ) -> None:
         """Create a CommitInfo object."""
@@ -572,7 +572,7 @@ class GitRetriever(CommitDataRetriever):
     ) -> Optional[List[CommitInfo]]:  # noqa: D102
         ignore_merge_commits = not check_merge_commits
         commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
-        commits = []
+        commits: List[CommitInfo] = []
         if commits_data is None:
             return commits
         individual_commits = split_commits_data(commits_data)
@@ -663,6 +663,8 @@ class GitlabRetriever(GitRetriever):
                 return None
             return target_branch_sha, commit_hash_head
         else:
+            if not default_branch:
+                return None
             # Otherwise test all commits off of the default branch
             logger.verbose_print(
                 f"\ton branch '{current_branch}': "
@@ -915,14 +917,14 @@ class GitHubRetriever(CommitDataRetriever):
         connection = http.client.HTTPSConnection('api.github.com')
         headers = {
             'User-Agent': 'dco_check',
-            'Authorization': 'token ' + self.github_token,
+            'Authorization': 'token ' + (self.github_token or ''),
         }
         connection.request('GET', compare_url, headers=headers)
         response = connection.getresponse()
         if 200 != response.getcode():  # pragma: no cover
-            from pprint import pprint
+            from pprint import pformat
             logger.print('Request failed: compare_url')
-            logger.print('reponse:', pprint(response.read().decode()))
+            logger.print('reponse:', pformat(response.read().decode()))
             return None
 
         # Extract data
@@ -1077,6 +1079,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         if retriever.applies():
             commit_retriever = retriever
             break
+    if not commit_retriever:
+        logger.print('Could not find an applicable GitRetriever')
+        return 1
     logger.print('Detected:', commit_retriever.name())
 
     # Get default branch from remote if enabled
