@@ -292,7 +292,7 @@ def is_valid_email(
     :param email: the email address to check
     :return: true if email is valid, false otherwise
     """
-    return re.match(r'^\S+@\S+\.\S+', email)
+    return bool(re.match(r'^\S+@\S+\.\S+', email))
 
 
 def get_head_commit_hash() -> Optional[str]:
