@@ -572,8 +572,10 @@ class GitRetriever(CommitDataRetriever):
     ) -> Optional[List[CommitInfo]]:  # noqa: D102
         ignore_merge_commits = not check_merge_commits
         commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
-        individual_commits = split_commits_data(commits_data)
         commits = []
+        if commits_data is None:
+            return commits
+        individual_commits = split_commits_data(commits_data)
         for commit_data in individual_commits:
             commit_lines = commit_data.split('\n')
             commit_hash = commit_lines[0]
