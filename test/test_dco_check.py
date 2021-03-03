@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+import os
 
 from dco_check.dco_check import get_default_branch_from_remote
 from dco_check.dco_check import main
@@ -26,8 +27,12 @@ class TestDcoCheck(unittest.TestCase):
         )
 
     def test_main(self) -> None:
+        if not os.path.exists('.git'):
+            self.skipTest('tree is not a git checkout')
         self.assertEqual(0, main(['-v']))
 
     def test_get_default_branch_from_remote(self) -> None:
+        if not os.path.exists('.git'):
+            self.skipTest('tree is not a git checkout')
         self.assertEqual('master', get_default_branch_from_remote('origin'))
         self.assertIsNone(get_default_branch_from_remote('this-remote-does-not-exist'))
