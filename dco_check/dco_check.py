@@ -258,10 +258,17 @@ def run(
     """
     output = None
     try:
+        env = os.environ.copy()
+        if 'LANG' in env:
+            del env['LANG']
+        for key in list(env.keys()):
+            if key.startswith('LC_'):
+                del env[key]
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            env=env,
         )
         output_stdout, _ = process.communicate()
         if process.returncode != 0:
