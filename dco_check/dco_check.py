@@ -987,7 +987,10 @@ def process_commits(
         # Extract sign off information
         sign_offs_name_email: List[Tuple[str, str]] = []
         for sign_off in sign_offs:
-            name, email = extract_name_and_email(sign_off)
+            sign_off_result = extract_name_and_email(sign_off)
+            if not sign_off_result:
+                continue
+            name, email = sign_off_result
             logger.verbose_print(f'\t\tfound sign-off: {format_name_and_email(name, email)}')
             if not is_valid_email(email):
                 infractions[commit.hash].append(f'invalid email: {email}')
