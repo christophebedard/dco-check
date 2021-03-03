@@ -146,3 +146,7 @@ dco:
 
 Python 3.6+ is required because of the use of f-strings.
 However, it shouldn't be too hard to remove them to support older versions of Python 3, if there is a demand for it, or if such a change is contributed to `dco-check`.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
