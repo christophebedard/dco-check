@@ -601,7 +601,7 @@ class GitRetriever(CommitDataRetriever):
         return commits
 
 
-class GitlabRetriever(GitRetriever):
+class GitLabRetriever(GitRetriever):
     """Implementation for GitLab CI."""
 
     def name(self) -> str:  # noqa: D102
@@ -1066,7 +1066,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Detect CI
     # Use first one that applies
     retrievers = [
-        GitlabRetriever,
+        GitLabRetriever,
         GitHubRetriever,
         AzurePipelinesRetriever,
         AppVeyorRetriever,
