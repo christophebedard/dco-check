@@ -22,7 +22,7 @@ from mypy import api
 def test_mypy():
     # Make sure to only check the source
     source_dir = os.path.join(str(Path(__file__).parents[1]), 'dco_check')
-    normal_report, error_report, exit_status = api.run([source_dir])
+    normal_report, error_report, exit_status = api.run([source_dir, "--strict"])
 
     if normal_report:
         print(normal_report)
