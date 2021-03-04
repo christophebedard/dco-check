@@ -69,7 +69,13 @@ class EnvDefaultOption(argparse.Action):
             **kwargs,
         )
 
-    def __call__(self, parser: argparse.ArgumentParser, namespace: argparse.Namespace, values: Any, option_string:Optional[str]=None) -> None:  # noqa
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Any,
+        option_string: Optional[str] = None,
+    ) -> None:  # noqa: D102
         setattr(namespace, self.dest, values)
 
 
@@ -103,7 +109,13 @@ class EnvDefaultStoreTrue(argparse.Action):
             help=help,
         )
 
-    def __call__(self, parser: argparse.ArgumentParser, namespace: argparse.Namespace, values: Any, option_string:Optional[str]=None) -> None:  # noqa
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Any,
+        option_string: Optional[str] = None,
+    ) -> None:  # noqa: D102
         setattr(namespace, self.dest, self.const)
 
 
