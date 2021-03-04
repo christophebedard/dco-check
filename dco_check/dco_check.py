@@ -54,8 +54,8 @@ class EnvDefaultOption(argparse.Action):
         self,
         env_var: str,
         default: Any,
-        help=None,  # noqa: A002
-        **kwargs,
+        help: Optional[str] = None,  # noqa: A002
+        **kwargs: Any,
     ) -> None:
         """Create an EnvDefaultOption."""
         # Set default to env var value if it exists
@@ -69,7 +69,7 @@ class EnvDefaultOption(argparse.Action):
             **kwargs,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):  # noqa
+    def __call__(self, parser: argparse.ArgumentParser, namespace: argparse.Namespace, values: Any, option_string:Optional[str]=None) -> None:  # noqa
         setattr(namespace, self.dest, values)
 
 
@@ -82,11 +82,11 @@ class EnvDefaultStoreTrue(argparse.Action):
 
     def __init__(
         self,
-        option_strings,
-        dest,
+        option_strings: str,
+        dest: str,
         env_var: str,
         default: bool = False,
-        help=None,  # noqa: A002
+        help: Optional[str] = None,  # noqa: A002
     ) -> None:
         """Create an EnvDefaultStoreTrue."""
         # Set default value to true if the env var exists
@@ -103,7 +103,7 @@ class EnvDefaultStoreTrue(argparse.Action):
             help=help,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):  # noqa
+    def __call__(self, parser: argparse.ArgumentParser, namespace: argparse.Namespace, values: Any, option_string:Optional[str]=None) -> None:  # noqa
         setattr(namespace, self.dest, self.const)
 
 
@@ -212,7 +212,7 @@ class Options:
             )
             sys.exit(1)
 
-    def get_options(self) -> Dict:
+    def get_options(self) -> Dict[str, Any]:
         """Get all options as a dict."""
         return self.__dict__
 
@@ -233,12 +233,12 @@ class Logger:
         self.__quiet = options.quiet
         self.__verbose = options.verbose
 
-    def print(self, msg='', *args, **kwargs) -> None:  # noqa: A003
+    def print(self, msg: str = '', *args: Any, **kwargs: Any) -> None:  # noqa: A003
         """Print if not quiet."""
         if not self.__quiet:
             print(msg, *args, **kwargs)
 
-    def verbose_print(self, msg='', *args, **kwargs) -> None:
+    def verbose_print(self, msg: str = '', *args: Any, **kwargs: Any) -> None:
         """Print if verbose."""
         if self.__verbose:
             print(msg, *args, **kwargs)
@@ -465,7 +465,7 @@ def format_name_and_email(
 def get_env_var(
     env_var: str,
     print_if_not_found: bool = True,
-    default: str = None,
+    default: Optional[str] = None,
 ) -> Optional[str]:
     """
     Get the value of an environment variable.
@@ -537,7 +537,7 @@ class CommitDataRetriever:
         """
         raise NotImplementedError  # pragma: no cover
 
-    def get_commits(self, base: str, head: str, **kwargs) -> Optional[List[CommitInfo]]:
+    def get_commits(self, base: str, head: str, **kwargs: Any) -> Optional[List[CommitInfo]]:
         """Get commit data."""
         raise NotImplementedError  # pragma: no cover
 
@@ -568,7 +568,7 @@ class GitRetriever(CommitDataRetriever):
         base: str,
         head: str,
         check_merge_commits: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> Optional[List[CommitInfo]]:  # noqa: D102
         ignore_merge_commits = not check_merge_commits
         commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
@@ -909,7 +909,7 @@ class GitHubRetriever(CommitDataRetriever):
         self,
         base: str,
         head: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> Optional[List[CommitInfo]]:  # noqa: D102
         # Request commit data
         compare_url_template = self.event_payload['repository']['compare_url']
