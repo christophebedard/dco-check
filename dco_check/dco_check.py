@@ -175,6 +175,12 @@ def get_parser() -> argparse.ArgumentParser:
             'verbose mode (print out more information) (default: %(default)s)'
         ),
     )
+    parser.add_argument(
+        '--version',
+        action='version',
+        help='show version number and exit',
+        version=f'dco-check version {__version__}',
+    )
     return parser
 
 
