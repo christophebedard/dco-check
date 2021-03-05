@@ -636,7 +636,7 @@ class GitLabRetriever(GitRetriever):
         if not commit_hash_head:
             return None
 
-        current_branch = get_env_var('CI_COMMIT_BRANCH')
+        current_branch = get_env_var('CI_COMMIT_REF_NAME')
         if get_env_var('CI_PIPELINE_SOURCE') == 'schedule':
             # Do not check scheduled pipelines
             logger.verbose_print("\ton scheduled pipeline: won't check commits")
@@ -659,13 +659,22 @@ class GitLabRetriever(GitRetriever):
             target_branch = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_NAME')
             if not target_branch:
                 return None
-            logger.verbose_print(
-                f"\ton merge request branch '{current_branch}': "
-                f"will check new commits off of target branch '{target_branch}'"
-            )
-            target_branch_sha = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_SHA')
-            if not target_branch_sha:
-                return None
+            # We can't get the target branch SHA if it is a detached pipeline
+            target_branch_sha = None
+            if 'detached' == get_env_var('CI_MERGE_REQUEST_EVENT_TYPE', print_if_not_found=False):
+                logger.verbose_print(
+                    f"\tdetached pipeline for '{current_branch}': "
+                    f"will check new commits off of target branch '{target_branch}'"
+                )
+                target_branch_sha = target_branch
+            else:
+                target_branch_sha = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_SHA')
+                if not target_branch_sha:
+                    return None
+                logger.verbose_print(
+                    f"\ton merge request branch '{current_branch}': "
+                    f"will check new commits off of target branch '{target_branch}'"
+                )
             return target_branch_sha, commit_hash_head
         elif get_env_var('CI_EXTERNAL_PULL_REQUEST_IID', print_if_not_found=False):
             # Get external merge request target branch
