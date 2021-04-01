@@ -113,10 +113,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.x
       uses: actions/setup-python@v1
       with:
-        python-version: 3.8
+        python-version: '3.x'
     - name: Check DCO
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
