@@ -69,13 +69,13 @@ class EnvDefaultOption(argparse.Action):
             **kwargs,
         )
 
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         parser: argparse.ArgumentParser,
         namespace: argparse.Namespace,
         values: Any,
         option_string: Optional[str] = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         setattr(namespace, self.dest, values)
 
 
@@ -109,13 +109,13 @@ class EnvDefaultStoreTrue(argparse.Action):
             help=help,
         )
 
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         parser: argparse.ArgumentParser,
         namespace: argparse.Namespace,
         values: Any,
         option_string: Optional[str] = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         setattr(namespace, self.dest, self.const)
 
 
@@ -581,13 +581,13 @@ class GitRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(
+    def get_commits(  # noqa: D102
         self,
         base: str,
         head: str,
         check_merge_commits: bool = False,
         **kwargs: Any,
-    ) -> Optional[List[CommitInfo]]:  # noqa: D102
+    ) -> Optional[List[CommitInfo]]:
         ignore_merge_commits = not check_merge_commits
         commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
         commits: List[CommitInfo] = []
@@ -923,12 +923,12 @@ class GitHubRetriever(CommitDataRetriever):
             return None
         return commit_hash_base, commit_hash_head
 
-    def get_commits(
+    def get_commits(  # noqa: D102
         self,
         base: str,
         head: str,
         **kwargs: Any,
-    ) -> Optional[List[CommitInfo]]:  # noqa: D102
+    ) -> Optional[List[CommitInfo]]:
         # Request commit data
         compare_url_template = self.event_payload['repository']['compare_url']
         compare_url = compare_url_template.format(base=base, head=head)
