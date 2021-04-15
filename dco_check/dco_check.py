@@ -29,7 +29,7 @@ from typing import Optional
 from typing import Tuple
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 DEFAULT_BRANCH = 'master'
