@@ -11,5 +11,5 @@ jobs:
     - uses: actions/checkout@v1
     - uses: christophebedard/tag-version-commit@v1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.TAG_CREATION_TOKEN }}
         version_assertion_command: 'python3 -c "import dco_check; assert dco_check.__version__ == \"$version\", \"git tag and dco_check version do not match\""'
