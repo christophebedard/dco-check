@@ -29,7 +29,7 @@ from typing import Tuple
 from urllib import request
 
 
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 
 DEFAULT_BRANCH = 'master'
