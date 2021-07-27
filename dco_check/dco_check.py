@@ -16,7 +16,6 @@
 
 import argparse
 from collections import defaultdict
-import http.client
 import json
 import os
 import re
@@ -27,6 +26,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from urllib import request
 
 
 __version__ = '0.1.1'
@@ -932,13 +932,11 @@ class GitHubRetriever(CommitDataRetriever):
         # Request commit data
         compare_url_template = self.event_payload['repository']['compare_url']
         compare_url = compare_url_template.format(base=base, head=head)
-        connection = http.client.HTTPSConnection('api.github.com')
-        headers = {
+        req = request.Request(compare_url, headers={
             'User-Agent': 'dco_check',
             'Authorization': 'token ' + (self.github_token or ''),
-        }
-        connection.request('GET', compare_url, headers=headers)
-        response = connection.getresponse()
+        })
+        response = request.urlopen(req)
         if 200 != response.getcode():  # pragma: no cover
             from pprint import pformat
             logger.print('Request failed: compare_url')
