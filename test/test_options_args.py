@@ -51,6 +51,7 @@ class TestOptionsArgs(unittest.TestCase):
             default_branch='b',
             default_branch_from_remote=False,
             default_remote='c',
+            exclude_emails='email@gmail.com,other@gmail.com',
             quiet=True,
             verbose=False,
         )
@@ -59,10 +60,14 @@ class TestOptionsArgs(unittest.TestCase):
         self.assertEqual('b', options.default_branch)
         self.assertEqual(False, options.default_branch_from_remote)
         self.assertEqual('c', options.default_remote)
+        self.assertEqual(['email@gmail.com', 'other@gmail.com'], options.exclude_emails)
         self.assertEqual(True, options.quiet)
         self.assertEqual(False, options.verbose)
 
-        self.assertDictEqual(vars(ns), options.get_options())
+        self.assertDictEqual(
+            {**vars(ns), 'exclude_emails': ['email@gmail.com', 'other@gmail.com']},
+            options.get_options(),
+        )
 
     @staticmethod
     def reset_environment() -> None:
@@ -71,6 +76,7 @@ class TestOptionsArgs(unittest.TestCase):
             'DCO_CHECK_DEFAULT_BRANCH',
             'DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE',
             'DCO_CHECK_DEFAULT_REMOTE',
+            'DCO_CHECK_EXCLUDE_EMAILS',
             'DCO_CHECK_QUIET',
             'DCO_CHECK_VERBOSE',
         ]
@@ -84,6 +90,7 @@ class TestOptionsArgs(unittest.TestCase):
         os.environ['DCO_CHECK_CHECK_MERGE_COMMITS'] = 'yessss'
         os.environ['DCO_CHECK_DEFAULT_BRANCH'] = 'adefaultbranch'
         os.environ['DCO_CHECK_DEFAULT_REMOTE'] = 'adefaultremote'
+        os.environ['DCO_CHECK_EXCLUDE_EMAILS'] = 'email@gmail.com,other@gmail.com'
         os.environ['DCO_CHECK_QUIET'] = 'True'
         # os.environ['DCO_CHECK_VERBOSE'] = 'False'
         test_argv = ['dco_check/dco_check.py']
@@ -94,6 +101,7 @@ class TestOptionsArgs(unittest.TestCase):
             self.assertEqual(True, options.check_merge_commits)
             self.assertEqual('adefaultbranch', options.default_branch)
             self.assertEqual('adefaultremote', options.default_remote)
+            self.assertEqual(['email@gmail.com', 'other@gmail.com'], options.exclude_emails)
             self.assertEqual(True, options.quiet)
             self.assertEqual(False, options.verbose)
 
@@ -102,6 +110,7 @@ class TestOptionsArgs(unittest.TestCase):
         os.environ['DCO_CHECK_CHECK_MERGE_COMMITS'] = 'yessss'
         os.environ['DCO_CHECK_DEFAULT_BRANCH'] = 'adefaultbranch'
         os.environ['DCO_CHECK_DEFAULT_REMOTE'] = 'adefaultremote'
+        os.environ['DCO_CHECK_EXCLUDE_EMAILS'] = 'email@gmail.com,other@gmail.com'
         os.environ['DCO_CHECK_QUIET'] = 'True'
         # os.environ['DCO_CHECK_VERBOSE'] = 'False'
         test_argv = [
@@ -109,6 +118,8 @@ class TestOptionsArgs(unittest.TestCase):
             '--check-merge-commits',  # Same value
             '--default-remote',
             'someremote',
+            '--exclude-emails',
+            'some@gmail.com',
         ]
         with patch.object(sys, 'argv', test_argv):
             args = parse_args()
@@ -117,6 +128,7 @@ class TestOptionsArgs(unittest.TestCase):
             self.assertEqual(True, options.check_merge_commits)
             self.assertEqual('adefaultbranch', options.default_branch)
             self.assertEqual('someremote', options.default_remote)
+            self.assertEqual(['some@gmail.com'], options.exclude_emails)
             self.assertEqual(True, options.quiet)
             self.assertEqual(False, options.verbose)
 

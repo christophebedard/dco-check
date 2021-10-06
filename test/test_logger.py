@@ -35,6 +35,7 @@ class TestLogger(unittest.TestCase):
             default_branch='b',
             default_branch_from_remote=False,
             default_remote='c',
+            exclude_emails=None,
             quiet=False,
             verbose=False,
         )
@@ -58,6 +59,7 @@ class TestLogger(unittest.TestCase):
             default_branch='b',
             default_branch_from_remote=False,
             default_remote='c',
+            exclude_emails=None,
             quiet=False,
             verbose=True,
         )
@@ -73,6 +75,7 @@ class TestLogger(unittest.TestCase):
             default_branch='b',
             default_branch_from_remote=False,
             default_remote='c',
+            exclude_emails=None,
             quiet=True,
             verbose=False,
         )
