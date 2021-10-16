@@ -53,6 +53,7 @@ Run with `--help` for more information and options, including:
 * default remote
 * quiet mode
 * verbose mode
+* excluding certain author emails (e.g., for bots)
 
 Those options can alternatively be set through environment variables (see `--help`), but commandline arguments always have precedence over environment variables.
 
