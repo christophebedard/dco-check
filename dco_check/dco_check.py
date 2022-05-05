@@ -32,9 +32,10 @@ from urllib import request
 __version__ = '0.3.0'
 
 
-DEFAULT_BRANCH = 'master'
+DEFAULT_BRANCH = 'development'
 DEFAULT_REMOTE = 'origin'
 ENV_VAR_CHECK_MERGE_COMMITS = 'DCO_CHECK_CHECK_MERGE_COMMITS'
+ENV_VAR_ALLOW_FIXUP = 'DCO_ALLOW_FIXUP'
 ENV_VAR_DEFAULT_BRANCH = 'DCO_CHECK_DEFAULT_BRANCH'
 ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE = 'DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE'
 ENV_VAR_DEFAULT_REMOTE = 'DCO_CHECK_DEFAULT_REMOTE'
@@ -42,6 +43,8 @@ ENV_VAR_EXCLUDE_EMAILS = 'DCO_CHECK_EXCLUDE_EMAILS'
 ENV_VAR_QUIET = 'DCO_CHECK_QUIET'
 ENV_VAR_VERBOSE = 'DCO_CHECK_VERBOSE'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
+FIXUP_STATEMENT = 'I sign-off for these past commits'
+DCO_FIX_INSTRUCTIONS = 'https://github.com/src-d/guide/blob/master/developer-community/fix-DCO.md'
 
 
 class EnvDefaultOption(argparse.Action):
@@ -151,6 +154,14 @@ def get_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        '-f', '--allow-fixup',
+        action=EnvDefaultStoreTrue, env_var=ENV_VAR_ALLOW_FIXUP,
+        default=False,
+        help=(
+            f'allow a fixup commit to skip checking using the statement "{FIXUP_STATEMENT}" in the commit message (default: %(default)s)'
+        ),
+    )
+    parser.add_argument(
         '-r', '--default-remote', metavar='REMOTE',
         action=EnvDefaultOption, env_var=ENV_VAR_DEFAULT_REMOTE,
         default=DEFAULT_REMOTE,
@@ -210,6 +221,7 @@ class Options:
     def __init__(self, parser: argparse.ArgumentParser) -> None:
         """Create using default argument values."""
         self.check_merge_commits = parser.get_default('m')
+        self.allow_fixup = parser.get_default('f')
         self.default_branch = parser.get_default('b')
         self.default_branch_from_remote = parser.get_default('default-branch-from-remote')
         self.default_remote = parser.get_default('r')
@@ -220,6 +232,7 @@ class Options:
     def set_options(self, args: argparse.Namespace) -> None:
         """Set options using parsed arguments."""
         self.check_merge_commits = args.check_merge_commits
+        self.allow_fixup = args.allow_fixup
         self.default_branch = args.default_branch
         self.default_branch_from_remote = args.default_branch_from_remote
         self.default_remote = args.default_remote
@@ -984,6 +997,7 @@ class GitHubRetriever(CommitDataRetriever):
 def process_commits(
     commits: List[CommitInfo],
     check_merge_commits: bool,
+    allow_fixup: bool
 ) -> Dict[str, List[str]]:
     """
     Process commit information to detect DCO infractions.
@@ -1042,7 +1056,7 @@ def process_commits(
             name, email = sign_off_result
             logger.verbose_print(f'\t\tfound sign-off: {format_name_and_email(name, email)}')
             if not is_valid_email(email):
-                infractions[commit.hash].append(f'invalid email: {email}')
+                infractions[commit.hash].append(f'invalid email: {email.rstrip()}')
             else:
                 sign_offs_name_email.append((name, email))
 
@@ -1052,6 +1066,14 @@ def process_commits(
                 'sign-off not found for commit author: '
                 f'{commit.author_name} {commit.author_email}; found: {sign_offs}'
             )
+        
+        # Skip all commits if a fix-up commit is added, but only if signed off
+        if FIXUP_STATEMENT in commit.title and allow_fixup and len(sign_offs) == 0:
+            logger.print('\t' + 'Fixup statement found in this commit, but it was not signed off', commit.hash, commit.body)
+            continue
+        elif FIXUP_STATEMENT in commit.title and allow_fixup:
+            logger.print('\t' + 'Allowing all commits prior to this commit to pass due to fixup statement:', commit.hash, commit.body)
+            break
 
         # Separator between commits
         logger.verbose_print()
@@ -1153,10 +1175,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
 
     # Process them
-    infractions = process_commits(commits, options.check_merge_commits)
+    infractions = process_commits(commits, options.check_merge_commits, options.allow_fixup)
 
     # Check if there are any infractions
     result = check_infractions(infractions)
+    if result:
+        logger.print(f'Sign-off errors found. You can fix this by using the instrcutions provided here: {DCO_FIX_INSTRUCTIONS}')
+        logger.print(f'To fixup this error, create an empty commit with the message "{FIXUP_STATEMENT}" with a sign-off')
 
     if len(commits) == 0:
         logger.print('Warning: no commits were actually checked')
