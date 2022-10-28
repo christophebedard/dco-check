@@ -907,7 +907,7 @@ class GitHubRetriever(CommitDataRetriever):
             return None
         commit_hash_base = None
         commit_hash_head = None
-        if event_name == 'pull_request':
+        if event_name in ('pull_request', 'pull_request_target'):
             # See: https://developer.github.com/v3/activity/events/types/#pullrequestevent
             commit_hash_base = self.event_payload['pull_request']['base']['sha']
             commit_hash_head = self.event_payload['pull_request']['head']['sha']
