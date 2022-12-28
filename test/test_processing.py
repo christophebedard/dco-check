@@ -199,6 +199,7 @@ class TestProcessing(unittest.TestCase):
             default_branch_from_remote=False,
             default_remote='c',
             exclude_emails='laa@laa.laa,tinky@winky.com',
+            exclude_pattern='gen\\[bot\\]@gmail\\.com',
             quiet=False,
             verbose=False,
         )
@@ -246,6 +247,19 @@ class TestProcessing(unittest.TestCase):
                 ['Signed-off-by: Laa-Laa <laa@laa.laa>'],
                 'Laa-Laa',
                 'laa@laa.laa',
+                False,
+            ),
+        ]
+        self.assertEqual(0, len(process_commits(commits, False)))
+        
+        # Signed-off but author email is matched with exclude pattern
+        commits = [
+            CommitInfo(
+                'adc',
+                'This is a commit title',
+                ['Signed-off-by: genericbot <[bot]@gmail.com>'],
+                'generic_bot',
+                '277373_gen[bot]@gmail.com',
                 False,
             ),
         ]

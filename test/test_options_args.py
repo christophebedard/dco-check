@@ -14,6 +14,7 @@
 
 import argparse
 import os
+import re
 import sys
 import unittest
 from unittest.mock import patch
@@ -52,6 +53,7 @@ class TestOptionsArgs(unittest.TestCase):
             default_branch_from_remote=False,
             default_remote='c',
             exclude_emails='email@gmail.com,other@gmail.com',
+            exclude_pattern='\\[bot\\]@gmail\\.com',
             quiet=True,
             verbose=False,
         )
@@ -61,11 +63,16 @@ class TestOptionsArgs(unittest.TestCase):
         self.assertEqual(False, options.default_branch_from_remote)
         self.assertEqual('c', options.default_remote)
         self.assertEqual(['email@gmail.com', 'other@gmail.com'], options.exclude_emails)
+        self.assertEqual(re.compile('\\[bot\\]@gmail\\.com'), options.exclude_pattern)
         self.assertEqual(True, options.quiet)
         self.assertEqual(False, options.verbose)
 
         self.assertDictEqual(
-            {**vars(ns), 'exclude_emails': ['email@gmail.com', 'other@gmail.com']},
+            {
+                **vars(ns),
+                'exclude_emails': ['email@gmail.com', 'other@gmail.com'],
+                'exclude_pattern': re.compile('\\[bot\\]@gmail\\.com')
+            },
             options.get_options(),
         )
 
@@ -77,6 +84,7 @@ class TestOptionsArgs(unittest.TestCase):
             'DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE',
             'DCO_CHECK_DEFAULT_REMOTE',
             'DCO_CHECK_EXCLUDE_EMAILS',
+            'DCO_CHECK_EXCLUDE_PATTERN',
             'DCO_CHECK_QUIET',
             'DCO_CHECK_VERBOSE',
         ]
@@ -91,6 +99,7 @@ class TestOptionsArgs(unittest.TestCase):
         os.environ['DCO_CHECK_DEFAULT_BRANCH'] = 'adefaultbranch'
         os.environ['DCO_CHECK_DEFAULT_REMOTE'] = 'adefaultremote'
         os.environ['DCO_CHECK_EXCLUDE_EMAILS'] = 'email@gmail.com,other@gmail.com'
+        os.environ['DCO_CHECK_EXCLUDE_PATTERN'] = '\\[bot\\]@gmail\\.com'
         os.environ['DCO_CHECK_QUIET'] = 'True'
         # os.environ['DCO_CHECK_VERBOSE'] = 'False'
         test_argv = ['dco_check/dco_check.py']
@@ -102,6 +111,7 @@ class TestOptionsArgs(unittest.TestCase):
             self.assertEqual('adefaultbranch', options.default_branch)
             self.assertEqual('adefaultremote', options.default_remote)
             self.assertEqual(['email@gmail.com', 'other@gmail.com'], options.exclude_emails)
+            self.assertEqual(re.compile('\\[bot\\]@gmail\\.com'), options.exclude_pattern)
             self.assertEqual(True, options.quiet)
             self.assertEqual(False, options.verbose)
 
@@ -111,6 +121,7 @@ class TestOptionsArgs(unittest.TestCase):
         os.environ['DCO_CHECK_DEFAULT_BRANCH'] = 'adefaultbranch'
         os.environ['DCO_CHECK_DEFAULT_REMOTE'] = 'adefaultremote'
         os.environ['DCO_CHECK_EXCLUDE_EMAILS'] = 'email@gmail.com,other@gmail.com'
+        os.environ['DCO_CHECK_EXCLUDE_PATTERN'] = '\\[bot\\]@gmail\\.com'
         os.environ['DCO_CHECK_QUIET'] = 'True'
         # os.environ['DCO_CHECK_VERBOSE'] = 'False'
         test_argv = [
