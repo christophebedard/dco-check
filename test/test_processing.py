@@ -199,6 +199,7 @@ class TestProcessing(unittest.TestCase):
             default_branch_from_remote=False,
             default_remote='c',
             exclude_emails='laa@laa.laa,tinky@winky.com',
+            exclude_pattern='\\[bot\\]@bot\\-domain\\.com',
             quiet=False,
             verbose=False,
         )
@@ -249,6 +250,21 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
+        self.assertEqual(0, len(process_commits(commits, False)))
+
+        # Signed-off but bot email is matched against exclude pattern
+        commits = [
+            CommitInfo(
+                'adc',
+                'This is a bot commit title',
+                [
+                  'Signed-off-by: bot <signer@bot-domain.com>'  
+                ],
+                'maintenance',
+                '736646+[bot]@bot-domain.com'
+            )
+        ]
+
         self.assertEqual(0, len(process_commits(commits, False)))
 
         options = original_options
