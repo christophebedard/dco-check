@@ -29,19 +29,20 @@ from typing import Tuple
 from urllib import request
 
 
-__version__ = '0.3.1'
+__version__ = "0.3.1"
 
 
-DEFAULT_BRANCH = 'master'
-DEFAULT_REMOTE = 'origin'
-ENV_VAR_CHECK_MERGE_COMMITS = 'DCO_CHECK_CHECK_MERGE_COMMITS'
-ENV_VAR_DEFAULT_BRANCH = 'DCO_CHECK_DEFAULT_BRANCH'
-ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE = 'DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE'
-ENV_VAR_DEFAULT_REMOTE = 'DCO_CHECK_DEFAULT_REMOTE'
-ENV_VAR_EXCLUDE_EMAILS = 'DCO_CHECK_EXCLUDE_EMAILS'
-ENV_VAR_QUIET = 'DCO_CHECK_QUIET'
-ENV_VAR_VERBOSE = 'DCO_CHECK_VERBOSE'
-TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
+DEFAULT_BRANCH = "master"
+DEFAULT_REMOTE = "origin"
+ENV_VAR_CHECK_MERGE_COMMITS = "DCO_CHECK_CHECK_MERGE_COMMITS"
+ENV_VAR_DEFAULT_BRANCH = "DCO_CHECK_DEFAULT_BRANCH"
+ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE = "DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE"
+ENV_VAR_DEFAULT_REMOTE = "DCO_CHECK_DEFAULT_REMOTE"
+ENV_VAR_EXCLUDE_EMAILS = "DCO_CHECK_EXCLUDE_EMAILS"
+ENV_VAR_EXCLUDE_PATTERN = "DCO_CHECK_EXCLUDE_PATTERN"
+ENV_VAR_QUIET = "DCO_CHECK_QUIET"
+ENV_VAR_VERBOSE = "DCO_CHECK_VERBOSE"
+TRAILER_KEY_SIGNED_OFF_BY = "Signed-off-by:"
 
 
 class EnvDefaultOption(argparse.Action):
@@ -63,7 +64,7 @@ class EnvDefaultOption(argparse.Action):
         if env_var in os.environ:
             default = os.environ[env_var]
         if help:  # pragma: no cover
-            help += f' [env: {env_var}]'
+            help += f" [env: {env_var}]"
         super(EnvDefaultOption, self).__init__(
             default=default,
             help=help,
@@ -99,7 +100,7 @@ class EnvDefaultStoreTrue(argparse.Action):
         # Set default value to true if the env var exists
         default = env_var in os.environ
         if help:  # pragma: no cover
-            help += f' [env: {env_var} (any value to enable)]'
+            help += f" [env: {env_var} (any value to enable)]"
         super(EnvDefaultStoreTrue, self).__init__(
             option_strings=option_strings,
             dest=dest,
@@ -123,73 +124,92 @@ class EnvDefaultStoreTrue(argparse.Action):
 def get_parser() -> argparse.ArgumentParser:
     """Get argument parser."""
     parser = argparse.ArgumentParser(
-        description='Check that all commits of a proposed change have a DCO, i.e. are signed-off.',
+        description="Check that all commits of a proposed change have a DCO, i.e. are signed-off.",
     )
     default_branch_group = parser.add_mutually_exclusive_group()
     default_branch_group.add_argument(
-        '-b', '--default-branch', metavar='BRANCH',
-        action=EnvDefaultOption, env_var=ENV_VAR_DEFAULT_BRANCH,
+        "-b",
+        "--default-branch",
+        metavar="BRANCH",
+        action=EnvDefaultOption,
+        env_var=ENV_VAR_DEFAULT_BRANCH,
         default=DEFAULT_BRANCH,
-        help=(
-            'default branch to use, if necessary (default: %(default)s)'
-        ),
+        help=("default branch to use, if necessary (default: %(default)s)"),
     )
     default_branch_group.add_argument(
-        '--default-branch-from-remote',
-        action=EnvDefaultStoreTrue, env_var=ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE,
+        "--default-branch-from-remote",
+        action=EnvDefaultStoreTrue,
+        env_var=ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE,
         default=False,
-        help=(
-            'get the default branch value from the remote (default: %(default)s)'
-        ),
+        help=("get the default branch value from the remote (default: %(default)s)"),
     )
     parser.add_argument(
-        '-m', '--check-merge-commits',
-        action=EnvDefaultStoreTrue, env_var=ENV_VAR_CHECK_MERGE_COMMITS,
+        "-m",
+        "--check-merge-commits",
+        action=EnvDefaultStoreTrue,
+        env_var=ENV_VAR_CHECK_MERGE_COMMITS,
         default=False,
-        help=(
-            'check sign-offs on merge commits as well (default: %(default)s)'
-        ),
+        help=("check sign-offs on merge commits as well (default: %(default)s)"),
     )
     parser.add_argument(
-        '-r', '--default-remote', metavar='REMOTE',
-        action=EnvDefaultOption, env_var=ENV_VAR_DEFAULT_REMOTE,
+        "-r",
+        "--default-remote",
+        metavar="REMOTE",
+        action=EnvDefaultOption,
+        env_var=ENV_VAR_DEFAULT_REMOTE,
         default=DEFAULT_REMOTE,
-        help=(
-            'default remote to use, if necessary (default: %(default)s)'
-        ),
+        help=("default remote to use, if necessary (default: %(default)s)"),
     )
     parser.add_argument(
-        '-e', '--exclude-emails', metavar='EMAIL[,EMAIL]',
-        action=EnvDefaultOption, env_var=ENV_VAR_EXCLUDE_EMAILS,
+        "-e",
+        "--exclude-emails",
+        metavar="EMAIL[,EMAIL]",
+        action=EnvDefaultOption,
+        env_var=ENV_VAR_EXCLUDE_EMAILS,
         default=None,
         help=(
-            'exclude a comma-separated list of author emails from checks '
-            '(commits with an author email matching one of these emails will be ignored)'
-        ),
-    )
-    output_options_group = parser.add_mutually_exclusive_group()
-    output_options_group.add_argument(
-        '-q', '--quiet',
-        action=EnvDefaultStoreTrue, env_var=ENV_VAR_QUIET,
-        default=False,
-        help=(
-            'quiet mode (do not print anything; simply exit with 0 or non-zero) '
-            '(default: %(default)s)'
-        ),
-    )
-    output_options_group.add_argument(
-        '-v', '--verbose',
-        action=EnvDefaultStoreTrue, env_var=ENV_VAR_VERBOSE,
-        default=False,
-        help=(
-            'verbose mode (print out more information) (default: %(default)s)'
+            "exclude a comma-separated list of author emails from checks "
+            "(commits with an author email matching one of these emails will be ignored)"
         ),
     )
     parser.add_argument(
-        '--version',
-        action='version',
-        help='show version number and exit',
-        version=f'dco-check version {__version__}',
+        "-p",
+        "--exclude-pattern",
+        metavar="PATTERN",
+        action=EnvDefaultOption,
+        env_var=ENV_VAR_EXCLUDE_PATTERN,
+        default=None,
+        help=(
+            "exclude regular expression pattern matched author email from checks "
+            "(commits with an author email matching regular expression pattern will be ignored)"
+        ),
+    )
+
+    output_options_group = parser.add_mutually_exclusive_group()
+    output_options_group.add_argument(
+        "-q",
+        "--quiet",
+        action=EnvDefaultStoreTrue,
+        env_var=ENV_VAR_QUIET,
+        default=False,
+        help=(
+            "quiet mode (do not print anything; simply exit with 0 or non-zero) "
+            "(default: %(default)s)"
+        ),
+    )
+    output_options_group.add_argument(
+        "-v",
+        "--verbose",
+        action=EnvDefaultStoreTrue,
+        env_var=ENV_VAR_VERBOSE,
+        default=False,
+        help=("verbose mode (print out more information) (default: %(default)s)"),
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        help="show version number and exit",
+        version=f"dco-check version {__version__}",
     )
     return parser
 
@@ -209,13 +229,16 @@ class Options:
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
         """Create using default argument values."""
-        self.check_merge_commits = parser.get_default('m')
-        self.default_branch = parser.get_default('b')
-        self.default_branch_from_remote = parser.get_default('default-branch-from-remote')
-        self.default_remote = parser.get_default('r')
-        self.exclude_emails = parser.get_default('e')
-        self.quiet = parser.get_default('q')
-        self.verbose = parser.get_default('v')
+        self.check_merge_commits = parser.get_default("m")
+        self.default_branch = parser.get_default("b")
+        self.default_branch_from_remote = parser.get_default(
+            "default-branch-from-remote"
+        )
+        self.default_remote = parser.get_default("r")
+        self.exclude_emails = parser.get_default("e")
+        self.exclude_pattern = parser.get_default("p")
+        self.quiet = parser.get_default("q")
+        self.verbose = parser.get_default("v")
 
     def set_options(self, args: argparse.Namespace) -> None:
         """Set options using parsed arguments."""
@@ -224,7 +247,11 @@ class Options:
         self.default_branch_from_remote = args.default_branch_from_remote
         self.default_remote = args.default_remote
         # Split into list and filter out empty elements
-        self.exclude_emails = list(filter(None, (args.exclude_emails or '').split(',')))
+        self.exclude_emails = list(filter(None, (args.exclude_emails or "").split(",")))
+        # Compile regular expression if provided
+        self.exclude_pattern = (
+            None if not args.exclude_pattern else re.compile(args.exclude_pattern)
+        )
         self.quiet = args.quiet
         self.verbose = args.verbose
         # Shouldn't happen with a mutually exclusive group,
@@ -256,20 +283,20 @@ class Logger:
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
         """Create using default argument values."""
-        self.__quiet = parser.get_default('q')
-        self.__verbose = parser.get_default('v')
+        self.__quiet = parser.get_default("q")
+        self.__verbose = parser.get_default("v")
 
     def set_options(self, options: Options) -> None:
         """Set options using options object."""
         self.__quiet = options.quiet
         self.__verbose = options.verbose
 
-    def print(self, msg: str = '', *args: Any, **kwargs: Any) -> None:  # noqa: A003
+    def print(self, msg: str = "", *args: Any, **kwargs: Any) -> None:  # noqa: A003
         """Print if not quiet."""
         if not self.__quiet:
             print(msg, *args, **kwargs)
 
-    def verbose_print(self, msg: str = '', *args: Any, **kwargs: Any) -> None:
+    def verbose_print(self, msg: str = "", *args: Any, **kwargs: Any) -> None:
         """Print if verbose."""
         if self.__verbose:
             print(msg, *args, **kwargs)
@@ -290,10 +317,10 @@ def run(
     output = None
     try:
         env = os.environ.copy()
-        if 'LANG' in env:
-            del env['LANG']
+        if "LANG" in env:
+            del env["LANG"]
         for key in list(env.keys()):
-            if key.startswith('LC_'):
+            if key.startswith("LC_"):
                 del env[key]
         process = subprocess.Popen(
             command,
@@ -305,7 +332,7 @@ def run(
         if process.returncode != 0:
             logger.print(f'error: {output_stdout.decode("utf8")}')
         else:
-            output = output_stdout.rstrip().decode('utf8').strip('\n')
+            output = output_stdout.rstrip().decode("utf8").strip("\n")
     except subprocess.CalledProcessError as e:
         logger.print(f'error: {e.output.decode("utf8")}')
     return output
@@ -323,7 +350,7 @@ def is_valid_email(
     :param email: the email address to check
     :return: true if email is valid, false otherwise
     """
-    return bool(re.match(r'^\S+@\S+\.\S+', email))
+    return bool(re.match(r"^\S+@\S+\.\S+", email))
 
 
 def get_head_commit_hash() -> Optional[str]:
@@ -333,10 +360,10 @@ def get_head_commit_hash() -> Optional[str]:
     :return: the hash of the HEAD commit, or `None` if it failed
     """
     command = [
-        'git',
-        'rev-parse',
-        '--verify',
-        'HEAD',
+        "git",
+        "rev-parse",
+        "--verify",
+        "HEAD",
     ]
     return run(command)
 
@@ -353,9 +380,9 @@ def get_common_ancestor_commit_hash(
     :return: the common ancestor commit, or `None` if it failed
     """
     command = [
-        'git',
-        'merge-base',
-        '--fork-point',
+        "git",
+        "merge-base",
+        "--fork-point",
         base_ref,
     ]
     return run(command)
@@ -363,7 +390,7 @@ def get_common_ancestor_commit_hash(
 
 def fetch_branch(
     branch: str,
-    remote: str = 'origin',
+    remote: str = "origin",
 ) -> int:
     """
     Fetch branch from remote.
@@ -375,8 +402,8 @@ def fetch_branch(
     :return: zero for success, nonzero otherwise
     """
     command = [
-        'git',
-        'fetch',
+        "git",
+        "fetch",
         remote,
         branch,
     ]
@@ -395,15 +422,15 @@ def get_default_branch_from_remote(
     """
     # https://stackoverflow.com/questions/28666357/git-how-to-get-default-branch#comment92366240_50056710  # noqa: E501
     #   $ git remote show origin
-    cmd = ['git', 'remote', 'show', remote]
+    cmd = ["git", "remote", "show", remote]
     result = run(cmd)
     if not result:
         return None
-    result_lines = result.split('\n')
+    result_lines = result.split("\n")
     branch = None
     for result_line in result_lines:
         # There is a two-space indentation
-        match = re.match('  HEAD branch: (.*)', result_line)
+        match = re.match("  HEAD branch: (.*)", result_line)
         if match:
             branch = match[1]
             break
@@ -432,19 +459,19 @@ def get_commits_data(
     :return: the data, or `None` if it failed
     """
     command = [
-        'git',
-        'log',
-        f'{base}..{head}',
-        '--pretty=%H%n%an <%ae>%n%s%n%-b%x1e',
+        "git",
+        "log",
+        f"{base}..{head}",
+        "--pretty=%H%n%an <%ae>%n%s%n%-b%x1e",
     ]
     if ignore_merge_commits:
-        command += ['--no-merges']
+        command += ["--no-merges"]
     return run(command)
 
 
 def split_commits_data(
     commits_data: str,
-    commits_sep: str = '\x1e',
+    commits_sep: str = "\x1e",
 ) -> List[str]:
     """
     Split data into individual commits using a separator.
@@ -454,10 +481,10 @@ def split_commits_data(
     :return: the list of data for each individual commit
     """
     # Remove leading/trailing newlines
-    commits_data = commits_data.strip('\n')
+    commits_data = commits_data.strip("\n")
     # Split in individual commits and remove leading/trailing newlines
     individual_commits = [
-        single_output.strip('\n') for single_output in commits_data.split(commits_sep)
+        single_output.strip("\n") for single_output in commits_data.split(commits_sep)
     ]
     # Filter out empty elements
     individual_commits = list(filter(None, individual_commits))
@@ -473,7 +500,7 @@ def extract_name_and_email(
     :param name_and_email: the name and email string
     :return: the extracted (name, email) tuple, or `None` if it failed
     """
-    match = re.search('(.*) <(.*)>', name_and_email)
+    match = re.search("(.*) <(.*)>", name_and_email)
     if not match:
         return None
     return match.group(1), match.group(2)
@@ -568,7 +595,9 @@ class CommitDataRetriever:
         """
         raise NotImplementedError  # pragma: no cover
 
-    def get_commits(self, base: str, head: str, **kwargs: Any) -> Optional[List[CommitInfo]]:
+    def get_commits(
+        self, base: str, head: str, **kwargs: Any
+    ) -> Optional[List[CommitInfo]]:
         """Get commit data."""
         raise NotImplementedError  # pragma: no cover
 
@@ -577,7 +606,7 @@ class GitRetriever(CommitDataRetriever):
     """Implementation for any git repository."""
 
     def name(self) -> str:  # noqa: D102
-        return 'git (default)'
+        return "git (default)"
 
     def applies(self) -> bool:  # noqa: D102
         # Unless we only have access to a partial commit history
@@ -602,13 +631,15 @@ class GitRetriever(CommitDataRetriever):
         **kwargs: Any,
     ) -> Optional[List[CommitInfo]]:
         ignore_merge_commits = not check_merge_commits
-        commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
+        commits_data = get_commits_data(
+            base, head, ignore_merge_commits=ignore_merge_commits
+        )
         commits: List[CommitInfo] = []
         if commits_data is None:
             return commits
         individual_commits = split_commits_data(commits_data)
         for commit_data in individual_commits:
-            commit_lines = commit_data.split('\n')
+            commit_lines = commit_data.split("\n")
             commit_hash = commit_lines[0]
             commit_author_data = commit_lines[1]
             commit_title = commit_lines[2]
@@ -636,60 +667,63 @@ class GitLabRetriever(GitRetriever):
     """Implementation for GitLab CI."""
 
     def name(self) -> str:  # noqa: D102
-        return 'GitLab'
+        return "GitLab"
 
     def applies(self) -> bool:  # noqa: D102
-        return get_env_var('GITLAB_CI', print_if_not_found=False) is not None
+        return get_env_var("GITLAB_CI", print_if_not_found=False) is not None
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=options.default_branch)
+        default_branch = get_env_var(
+            "CI_DEFAULT_BRANCH", default=options.default_branch
+        )
 
-        commit_hash_head = get_env_var('CI_COMMIT_SHA')
+        commit_hash_head = get_env_var("CI_COMMIT_SHA")
         if not commit_hash_head:
             return None
 
-        current_branch = get_env_var('CI_COMMIT_BRANCH')
-        if get_env_var('CI_PIPELINE_SOURCE') == 'schedule':
+        current_branch = get_env_var("CI_COMMIT_BRANCH")
+        if get_env_var("CI_PIPELINE_SOURCE") == "schedule":
             # Do not check scheduled pipelines
             logger.verbose_print("\ton scheduled pipeline: won't check commits")
             return commit_hash_head, commit_hash_head
         elif current_branch == default_branch:
             # If we're on the default branch, just test new commits
             logger.verbose_print(
-                f"\ton default branch '{current_branch}': "
-                'will check new commits'
+                f"\ton default branch '{current_branch}': " "will check new commits"
             )
-            commit_hash_base = get_env_var('CI_COMMIT_BEFORE_SHA')
-            if commit_hash_base == '0000000000000000000000000000000000000000':
-                logger.verbose_print('\tfound no new commits')
+            commit_hash_base = get_env_var("CI_COMMIT_BEFORE_SHA")
+            if commit_hash_base == "0000000000000000000000000000000000000000":
+                logger.verbose_print("\tfound no new commits")
                 return commit_hash_head, commit_hash_head
             if not commit_hash_base:
                 return None
             return commit_hash_base, commit_hash_head
-        elif get_env_var('CI_MERGE_REQUEST_ID', print_if_not_found=False):
+        elif get_env_var("CI_MERGE_REQUEST_ID", print_if_not_found=False):
             # Get merge request target branch
-            target_branch = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_NAME')
+            target_branch = get_env_var("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
             if not target_branch:
                 return None
             logger.verbose_print(
                 f"\ton merge request branch '{current_branch}': "
                 f"will check new commits off of target branch '{target_branch}'"
             )
-            target_branch_sha = get_env_var('CI_MERGE_REQUEST_TARGET_BRANCH_SHA')
+            target_branch_sha = get_env_var("CI_MERGE_REQUEST_TARGET_BRANCH_SHA")
             if not target_branch_sha:
                 return None
             return target_branch_sha, commit_hash_head
-        elif get_env_var('CI_EXTERNAL_PULL_REQUEST_IID', print_if_not_found=False):
+        elif get_env_var("CI_EXTERNAL_PULL_REQUEST_IID", print_if_not_found=False):
             # Get external merge request target branch
-            target_branch = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME')
+            target_branch = get_env_var("CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME")
             if not target_branch:
                 return None
             logger.verbose_print(
                 f"\ton merge request branch '{current_branch}': "
                 f"will check new commits off of target branch '{target_branch}'"
             )
-            target_branch_sha = get_env_var('CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_SHA')
+            target_branch_sha = get_env_var(
+                "CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_SHA"
+            )
             if not target_branch_sha:
                 return None
             return target_branch_sha, commit_hash_head
@@ -704,10 +738,12 @@ class GitLabRetriever(GitRetriever):
             # Fetch default branch
             remote = options.default_remote
             if 0 != fetch_branch(default_branch, remote):
-                logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
+                logger.print(
+                    f"failed to fetch '{default_branch}' from remote '{remote}'"
+                )
                 return None
             # Use remote default branch ref
-            remote_branch_ref = remote + '/' + default_branch
+            remote_branch_ref = remote + "/" + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
             if not commit_hash_base:
                 return None
@@ -718,16 +754,16 @@ class CircleCiRetriever(GitRetriever):
     """Implementation for CircleCI."""
 
     def name(self) -> str:  # noqa: D102
-        return 'CircleCI'
+        return "CircleCI"
 
     def applies(self) -> bool:  # noqa: D102
-        return get_env_var('CIRCLECI', print_if_not_found=False) is not None
+        return get_env_var("CIRCLECI", print_if_not_found=False) is not None
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
         default_branch = options.default_branch
 
-        commit_hash_head = get_env_var('CIRCLE_SHA1')
+        commit_hash_head = get_env_var("CIRCLE_SHA1")
         if not commit_hash_head:
             return None
 
@@ -737,7 +773,7 @@ class CircleCiRetriever(GitRetriever):
         # See:
         #   https://circleci.com/docs/2.0/pipeline-variables/
         #   https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
-        base_revision = get_env_var('CIRCLE_BASE_REVISION', print_if_not_found=False)
+        base_revision = get_env_var("CIRCLE_BASE_REVISION", print_if_not_found=False)
         if base_revision:
             # For PRs, this is the commit of the base branch,
             # and, for pushes to a branch, this is the commit before the new commits
@@ -746,7 +782,7 @@ class CircleCiRetriever(GitRetriever):
             )
             return base_revision, commit_hash_head
         else:
-            current_branch = get_env_var('CIRCLE_BRANCH')
+            current_branch = get_env_var("CIRCLE_BRANCH")
             if not current_branch:
                 return None
             # Test all commits off of the default branch
@@ -757,10 +793,12 @@ class CircleCiRetriever(GitRetriever):
             # Fetch default branch
             remote = options.default_remote
             if 0 != fetch_branch(default_branch, remote):
-                logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
+                logger.print(
+                    f"failed to fetch '{default_branch}' from remote '{remote}'"
+                )
                 return None
             # Use remote default branch ref
-            remote_branch_ref = remote + '/' + default_branch
+            remote_branch_ref = remote + "/" + default_branch
             commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
             if not commit_hash_base:
                 return None
@@ -771,29 +809,29 @@ class AzurePipelinesRetriever(GitRetriever):
     """Implementation for Azure Pipelines."""
 
     def name(self) -> str:  # noqa: D102
-        return 'Azure Pipelines'
+        return "Azure Pipelines"
 
     def applies(self) -> bool:  # noqa: D102
-        return get_env_var('TF_BUILD', print_if_not_found=False) is not None
+        return get_env_var("TF_BUILD", print_if_not_found=False) is not None
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#build-variables  # noqa: E501
-        commit_hash_head = get_env_var('BUILD_SOURCEVERSION')
+        commit_hash_head = get_env_var("BUILD_SOURCEVERSION")
         if not commit_hash_head:
             return None
-        current_branch = get_env_var('BUILD_SOURCEBRANCHNAME')
+        current_branch = get_env_var("BUILD_SOURCEBRANCHNAME")
         if not current_branch:
             return None
 
         base_branch = None
         # Check if pull request
         is_pull_request = get_env_var(
-            'SYSTEM_PULLREQUEST_PULLREQUESTID',
+            "SYSTEM_PULLREQUEST_PULLREQUESTID",
             print_if_not_found=False,
         )
         if is_pull_request:
             # Test all commits off of the target branch
-            target_branch = get_env_var('SYSTEM_PULLREQUEST_TARGETBRANCH')
+            target_branch = get_env_var("SYSTEM_PULLREQUEST_TARGETBRANCH")
             if not target_branch:
                 return None
             logger.verbose_print(
@@ -816,7 +854,7 @@ class AzurePipelinesRetriever(GitRetriever):
             logger.print(f"failed to fetch '{base_branch}' from remote '{remote}'")
             return None
         # Use remote default branch ref
-        remote_branch_ref = remote + '/' + base_branch
+        remote_branch_ref = remote + "/" + base_branch
         commit_hash_base = get_common_ancestor_commit_hash(remote_branch_ref)
         if not commit_hash_base:
             return None
@@ -827,28 +865,28 @@ class AppVeyorRetriever(GitRetriever):
     """Implementation for AppVeyor."""
 
     def name(self) -> str:  # noqa: D102
-        return 'AppVeyor'
+        return "AppVeyor"
 
     def applies(self) -> bool:  # noqa: D102
-        return get_env_var('APPVEYOR', print_if_not_found=False) is not None
+        return get_env_var("APPVEYOR", print_if_not_found=False) is not None
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://www.appveyor.com/docs/environment-variables/
         default_branch = options.default_branch
 
-        commit_hash_head = get_env_var('APPVEYOR_REPO_COMMIT')
+        commit_hash_head = get_env_var("APPVEYOR_REPO_COMMIT")
         if not commit_hash_head:
             commit_hash_head = get_head_commit_hash()
             if not commit_hash_head:
                 return None
 
-        branch = get_env_var('APPVEYOR_REPO_BRANCH')
+        branch = get_env_var("APPVEYOR_REPO_BRANCH")
         if not branch:
             return None
 
         # Check if pull request
-        if get_env_var('APPVEYOR_PULL_REQUEST_NUMBER', print_if_not_found=False):
-            current_branch = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH')
+        if get_env_var("APPVEYOR_PULL_REQUEST_NUMBER", print_if_not_found=False):
+            current_branch = get_env_var("APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH")
             if not current_branch:
                 return None
             target_branch = branch
@@ -856,7 +894,9 @@ class AppVeyorRetriever(GitRetriever):
                 f"\ton pull request branch '{current_branch}': "
                 f"will check commits off of target branch '{target_branch}'"
             )
-            commit_hash_head = get_env_var('APPVEYOR_PULL_REQUEST_HEAD_COMMIT') or commit_hash_head
+            commit_hash_head = (
+                get_env_var("APPVEYOR_PULL_REQUEST_HEAD_COMMIT") or commit_hash_head
+            )
             if not commit_hash_head:
                 return None
             commit_hash_base = get_common_ancestor_commit_hash(target_branch)
@@ -880,21 +920,21 @@ class GitHubRetriever(CommitDataRetriever):
     """Implementation for GitHub CI."""
 
     def name(self) -> str:  # noqa: D102
-        return 'GitHub CI'
+        return "GitHub CI"
 
     def applies(self) -> bool:  # noqa: D102
-        return get_env_var('GITHUB_ACTIONS', print_if_not_found=False) == 'true'
+        return get_env_var("GITHUB_ACTIONS", print_if_not_found=False) == "true"
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        self.github_token = get_env_var('GITHUB_TOKEN')
+        self.github_token = get_env_var("GITHUB_TOKEN")
         if not self.github_token:
-            logger.print('Did you forget to include this in your workflow config?')
-            logger.print('\n\tenv:\n\t\tGITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}')
+            logger.print("Did you forget to include this in your workflow config?")
+            logger.print("\n\tenv:\n\t\tGITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}")
             return None
 
         # See: https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables  # noqa: E501
-        event_payload_path = get_env_var('GITHUB_EVENT_PATH')
+        event_payload_path = get_env_var("GITHUB_EVENT_PATH")
         if not event_payload_path:
             return None
         f = open(event_payload_path)
@@ -902,37 +942,37 @@ class GitHubRetriever(CommitDataRetriever):
         f.close()
 
         # Get base & head commits depending on the workflow event type
-        event_name = get_env_var('GITHUB_EVENT_NAME')
+        event_name = get_env_var("GITHUB_EVENT_NAME")
         if not event_name:
             return None
         commit_hash_base = None
         commit_hash_head = None
-        if event_name in ('pull_request', 'pull_request_target'):
+        if event_name in ("pull_request", "pull_request_target"):
             # See: https://developer.github.com/v3/activity/events/types/#pullrequestevent
-            commit_hash_base = self.event_payload['pull_request']['base']['sha']
-            commit_hash_head = self.event_payload['pull_request']['head']['sha']
-            commit_branch_base = self.event_payload['pull_request']['base']['ref']
-            commit_branch_head = self.event_payload['pull_request']['head']['ref']
+            commit_hash_base = self.event_payload["pull_request"]["base"]["sha"]
+            commit_hash_head = self.event_payload["pull_request"]["head"]["sha"]
+            commit_branch_base = self.event_payload["pull_request"]["base"]["ref"]
+            commit_branch_head = self.event_payload["pull_request"]["head"]["ref"]
             logger.verbose_print(
                 f"\ton pull request branch '{commit_branch_head}': "
                 f"will check commits off of base branch '{commit_branch_base}'"
             )
-        elif event_name == 'push':
+        elif event_name == "push":
             # See: https://developer.github.com/v3/activity/events/types/#pushevent
-            created = self.event_payload['created']
+            created = self.event_payload["created"]
             if created:
                 # If the branch was just created, there won't be a 'before' commit,
                 # therefore just get the first commit in the new branch and append '^'
                 # to get the commit before that one
-                commits = self.event_payload['commits']
+                commits = self.event_payload["commits"]
                 # TODO check len(commits),
                 # it's probably 0 when pushing a new branch that is based on an existing one
-                commit_hash_base = commits[0]['id'] + '^'
+                commit_hash_base = commits[0]["id"] + "^"
             else:
-                commit_hash_base = self.event_payload['before']
-            commit_hash_head = self.event_payload['head_commit']['id']
+                commit_hash_base = self.event_payload["before"]
+            commit_hash_head = self.event_payload["head_commit"]["id"]
         else:  # pragma: no cover
-            logger.print('Unknown workflow event:', event_name)
+            logger.print("Unknown workflow event:", event_name)
             return None
         return commit_hash_base, commit_hash_head
 
@@ -943,31 +983,35 @@ class GitHubRetriever(CommitDataRetriever):
         **kwargs: Any,
     ) -> Optional[List[CommitInfo]]:
         # Request commit data
-        compare_url_template = self.event_payload['repository']['compare_url']
+        compare_url_template = self.event_payload["repository"]["compare_url"]
         compare_url = compare_url_template.format(base=base, head=head)
-        req = request.Request(compare_url, headers={
-            'User-Agent': 'dco_check',
-            'Authorization': 'token ' + (self.github_token or ''),
-        })
+        req = request.Request(
+            compare_url,
+            headers={
+                "User-Agent": "dco_check",
+                "Authorization": "token " + (self.github_token or ""),
+            },
+        )
         response = request.urlopen(req)
         if 200 != response.getcode():  # pragma: no cover
             from pprint import pformat
-            logger.print('Request failed: compare_url')
-            logger.print('reponse:', pformat(response.read().decode()))
+
+            logger.print("Request failed: compare_url")
+            logger.print("reponse:", pformat(response.read().decode()))
             return None
 
         # Extract data
         response_json = json.load(response)
         commits = []
-        for commit in response_json['commits']:
-            commit_hash = commit['sha']
-            message = commit['commit']['message'].split('\n')
+        for commit in response_json["commits"]:
+            commit_hash = commit["sha"]
+            message = commit["commit"]["message"].split("\n")
             message = list(filter(None, message))
             commit_title = message[0]
             commit_body = message[1:]
-            author_name = commit['commit']['author']['name']
-            author_email = commit['commit']['author']['email']
-            is_merge_commit = len(commit['parents']) > 1
+            author_name = commit["commit"]["author"]["name"]
+            author_email = commit["commit"]["author"]["email"]
+            is_merge_commit = len(commit["parents"]) > 1
             commits.append(
                 CommitInfo(
                     commit_hash,
@@ -997,40 +1041,56 @@ def process_commits(
         # Skip this commit if it is a merge commit and the
         # option for checking merge commits is not enabled
         if commit.is_merge_commit and not check_merge_commits:
-            logger.verbose_print('\t' + 'ignoring merge commit:', commit.hash)
+            logger.verbose_print("\t" + "ignoring merge commit:", commit.hash)
             logger.verbose_print()
             continue
 
         logger.verbose_print(
-            '\t' + commit.hash + (' (merge commit)' if commit.is_merge_commit else '')
+            "\t" + commit.hash + (" (merge commit)" if commit.is_merge_commit else "")
         )
-        logger.verbose_print('\t' + format_name_and_email(commit.author_name, commit.author_email))
-        logger.verbose_print('\t' + commit.title)
-        logger.verbose_print('\t' + '\n\t'.join(commit.body))
+        logger.verbose_print(
+            "\t" + format_name_and_email(commit.author_name, commit.author_email)
+        )
+        logger.verbose_print("\t" + commit.title)
+        logger.verbose_print("\t" + "\n\t".join(commit.body))
 
         # Check author name and email
         if any(not d for d in [commit.author_name, commit.author_email]):
             infractions[commit.hash].append(
-                f'could not extract author data for commit: {commit.hash}'
+                f"could not extract author data for commit: {commit.hash}"
             )
             continue
 
         # Check if the commit should be ignored because of the commit author email
         if options.exclude_emails and commit.author_email in options.exclude_emails:
-            logger.verbose_print('\t\texcluding commit since author email is in exclude list')
+            logger.verbose_print(
+                "\t\texcluding commit since author email is in exclude list"
+            )
+            logger.verbose_print()
+            continue
+
+        # Check if the commit should be ignored because of the commit author email pattern
+        if (
+            commit.author_email
+            and options.exclude_pattern
+            and options.exclude_pattern.search(commit.author_email)
+        ):
+            logger.verbose_print(
+                "\t\texcluding commit since author email is matched by exclude pattern"
+            )
             logger.verbose_print()
             continue
 
         # Extract sign-off data
         sign_offs = [
-            body_line.replace(TRAILER_KEY_SIGNED_OFF_BY, '').strip(' ')
+            body_line.replace(TRAILER_KEY_SIGNED_OFF_BY, "").strip(" ")
             for body_line in commit.body
             if body_line.startswith(TRAILER_KEY_SIGNED_OFF_BY)
         ]
 
         # Check that there is at least one sign-off right away
         if len(sign_offs) == 0:
-            infractions[commit.hash].append('no sign-off found')
+            infractions[commit.hash].append("no sign-off found")
             continue
 
         # Extract sign off information
@@ -1040,17 +1100,19 @@ def process_commits(
             if not sign_off_result:
                 continue
             name, email = sign_off_result
-            logger.verbose_print(f'\t\tfound sign-off: {format_name_and_email(name, email)}')
+            logger.verbose_print(
+                f"\t\tfound sign-off: {format_name_and_email(name, email)}"
+            )
             if not is_valid_email(email):
-                infractions[commit.hash].append(f'invalid email: {email}')
+                infractions[commit.hash].append(f"invalid email: {email}")
             else:
                 sign_offs_name_email.append((name, email))
 
         # Check that author is in the sign-offs
         if not (commit.author_name, commit.author_email) in sign_offs_name_email:
             infractions[commit.hash].append(
-                'sign-off not found for commit author: '
-                f'{commit.author_name} {commit.author_email}; found: {sign_offs}'
+                "sign-off not found for commit author: "
+                f"{commit.author_name} {commit.author_email}; found: {sign_offs}"
             )
 
         # Separator between commits
@@ -1069,14 +1131,14 @@ def check_infractions(
     :return: 0 if no infractions, non-zero otherwise
     """
     if len(infractions) > 0:
-        logger.print('Missing sign-off(s):')
+        logger.print("Missing sign-off(s):")
         logger.print()
         for commit_sha, commit_infractions in infractions.items():
-            logger.print('\t' + commit_sha)
+            logger.print("\t" + commit_sha)
             for commit_infraction in commit_infractions:
-                logger.print('\t\t' + commit_infraction)
+                logger.print("\t\t" + commit_infraction)
         return 1
-    logger.print('All good!')
+    logger.print("All good!")
     return 0
 
 
@@ -1093,9 +1155,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Print options
     if options.verbose:
-        logger.verbose_print('Options:')
+        logger.verbose_print("Options:")
         for name, value in options.get_options().items():
-            logger.verbose_print(f'\t{name}: {str(value)}')
+            logger.verbose_print(f"\t{name}: {str(value)}")
         logger.verbose_print()
 
     # Detect CI
@@ -1115,15 +1177,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             commit_retriever = retriever
             break
     if not commit_retriever:
-        logger.print('Could not find an applicable GitRetriever')
+        logger.print("Could not find an applicable GitRetriever")
         return 1
-    logger.print('Detected:', commit_retriever.name())
+    logger.print("Detected:", commit_retriever.name())
 
     # Get default branch from remote if enabled
     if options.default_branch_from_remote:
         remote_default_branch = get_default_branch_from_remote(options.default_remote)
         if not remote_default_branch:
-            logger.print('Could not get default branch from remote')
+            logger.print("Could not get default branch from remote")
             return 1
         options.default_branch = remote_default_branch
         logger.print(f"\tgot default branch '{remote_default_branch}' from remote")
@@ -1137,10 +1199,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     logger.print()
     # Return success now if base == head
     if commit_hash_base == commit_hash_head:
-        logger.print('No commits to check')
+        logger.print("No commits to check")
         return 0
 
-    logger.print(f'Checking commits: {commit_hash_base}..{commit_hash_head}')
+    logger.print(f"Checking commits: {commit_hash_base}..{commit_hash_head}")
     logger.print()
 
     # Get commits
@@ -1159,10 +1221,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     result = check_infractions(infractions)
 
     if len(commits) == 0:
-        logger.print('Warning: no commits were actually checked')
+        logger.print("Warning: no commits were actually checked")
 
     return result
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

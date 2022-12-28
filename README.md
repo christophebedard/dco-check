@@ -52,6 +52,7 @@ Run with `--help` for more information and options, including:
 * default branch
 * default remote
 * list of commit author emails to exclude from checks
+* regular expression pattern matching author email to exclude from checks  
 * quiet mode
 * verbose mode
 * excluding certain author emails (e.g., for bots)
