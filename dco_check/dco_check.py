@@ -39,6 +39,7 @@ ENV_VAR_DEFAULT_BRANCH = 'DCO_CHECK_DEFAULT_BRANCH'
 ENV_VAR_DEFAULT_BRANCH_FROM_REMOTE = 'DCO_CHECK_DEFAULT_BRANCH_FROM_REMOTE'
 ENV_VAR_DEFAULT_REMOTE = 'DCO_CHECK_DEFAULT_REMOTE'
 ENV_VAR_EXCLUDE_EMAILS = 'DCO_CHECK_EXCLUDE_EMAILS'
+ENV_VAR_EXCLUDE_PATTERN = 'DCO_CHECK_EXCLUDE_PATTERN'
 ENV_VAR_QUIET = 'DCO_CHECK_QUIET'
 ENV_VAR_VERBOSE = 'DCO_CHECK_VERBOSE'
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
@@ -167,6 +168,15 @@ def get_parser() -> argparse.ArgumentParser:
             '(commits with an author email matching one of these emails will be ignored)'
         ),
     )
+    parser.add_argument(
+        '-p', '--exclude-pattern', metavar='REGEX',
+        action=EnvDefaultOption, env_var=ENV_VAR_EXCLUDE_PATTERN,
+        default=None,
+        help=(
+            'exclude regular expresssion matched author emails from checks '
+            '(commits with an author email matching regular expression pattern will be ignored)'
+        ),
+    )
     output_options_group = parser.add_mutually_exclusive_group()
     output_options_group.add_argument(
         '-q', '--quiet',
@@ -214,6 +224,7 @@ class Options:
         self.default_branch_from_remote = parser.get_default('default-branch-from-remote')
         self.default_remote = parser.get_default('r')
         self.exclude_emails = parser.get_default('e')
+        self.exclude_pattern = parser.get_default('p')
         self.quiet = parser.get_default('q')
         self.verbose = parser.get_default('v')
 
@@ -225,6 +236,9 @@ class Options:
         self.default_remote = args.default_remote
         # Split into list and filter out empty elements
         self.exclude_emails = list(filter(None, (args.exclude_emails or '').split(',')))
+        self.exclude_pattern = (
+            None if not args.exclude_pattern else re.compile(args.exclude_pattern)
+        )
         self.quiet = args.quiet
         self.verbose = args.verbose
         # Shouldn't happen with a mutually exclusive group,
@@ -1020,6 +1034,14 @@ def process_commits(
             logger.verbose_print('\t\texcluding commit since author email is in exclude list')
             logger.verbose_print()
             continue
+
+        # Check if the commit should be ignored because of the commit author email pattern
+        if commit.author_email and options.exclude_pattern:
+            if options.exclude_pattern.search(commit.author_email):
+                logger.verbose_print('\t\texcluding commit since author email is matched by')
+                logger.verbose_print('\t\tpattern')
+                logger.verbose_print()
+                continue
 
         # Extract sign-off data
         sign_offs = [
