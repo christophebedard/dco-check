@@ -32,4 +32,4 @@ workflows:
       - check-DCO:
           matrix:
             parameters:
-              python_version: ["3.6", "3.7", "3.8"]
+              python_version: ["3.10"]
