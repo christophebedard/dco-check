@@ -116,7 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Check DCO
     steps:
-      - name: DCO Compliance Check
+      - name: Run dco-check
         uses: christophebedard/dco-check@0.5.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
