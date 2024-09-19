@@ -1,14 +1,14 @@
 # action.yml
-name: 'Check DCO Signoff'
-description: 'A reusable action that checks if all commit has a DCO signoff'
+name: 'DCO check'
+description: 'A reusable action that checks that all commits for a proposed change are signed off'
 runs:
   using: "composite"
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.12
 
-    - name: Run Python script
+    - name: Check DCO
       run: python ${{ github.action_path }}/dco_check.py
       shell: bash
