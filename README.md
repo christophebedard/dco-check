@@ -112,20 +112,14 @@ on:
     branches:
       - master
 jobs:
-  check:
+  check_dco:
     runs-on: ubuntu-latest
+    name: Check DCO
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.x
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    - name: Check DCO
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        pip3 install -U dco-check
-        dco-check
+      - name: DCO Compliance Check
+        uses: christophebedard/dco-check@0.5.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### GitLab
