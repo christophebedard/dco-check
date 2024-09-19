@@ -931,14 +931,14 @@ class GitHubRetriever(CommitDataRetriever):
                 f"\ton pull request branch '{commit_branch_head}': "
                 f"will check commits off of base branch '{commit_branch_base}'"
             )
-        elif event_name in 'merge_group':
+        elif event_name == 'merge_group':
             # See: https://docs.github.com/en/webhooks/webhook-events-and-payloads#merge_group
             commit_hash_base = self.event_payload['merge_group']['base_sha']
             commit_hash_head = self.event_payload['merge_group']['head_sha']
             commit_branch_base = self.event_payload['merge_group']['base_ref']
             commit_branch_head = self.event_payload['merge_group']['head_ref']
             logger.verbose_print(
-                f"\ton merge request branch '{commit_branch_head}': "
+                f"\ton merge group branch '{commit_branch_head}': "
                 f"will check commits off of base branch '{commit_branch_base}'"
             )
         elif event_name == 'push':
