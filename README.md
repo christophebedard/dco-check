@@ -118,9 +118,14 @@ jobs:
     steps:
       - name: Run dco-check
         uses: christophebedard/dco-check@0.5.0
+        with:
+            python-version: '3.12'
+            args: '--verbose'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+Please note that the `with:` property is optional, the default python version is 3.12 and no additional arguments are passed by default.
 
 ### GitLab
 

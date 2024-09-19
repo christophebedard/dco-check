@@ -7,19 +7,17 @@ on:
       - master
 
 jobs:
-  check:
+  check_dco:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    name: Check DCO
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Check DCO
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        python3 dco_check/dco_check.py --verbose
+      - name: Run dco-check
+        uses: christophebedard/dco-check@0.5.0
+        with:
+            python-version: ${{ matrix.python-version }}
+            args: '--verbose'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
