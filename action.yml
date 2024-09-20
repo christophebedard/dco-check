@@ -21,5 +21,5 @@ runs:
         python-version: ${{ inputs.python-version }}
 
     - name: Check DCO
-      run: python ${{ github.action_path }}/dco_check.py ${{ inputs.args }}
+      run: python ${{ github.action_path }}/dco_check/dco_check.py ${{ inputs.args }}
       shell: bash
