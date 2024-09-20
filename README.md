@@ -125,7 +125,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Please note that the `with:` property is optional, the default python version is 3.12 and no additional arguments are passed by default.
+Please note that the `with:` property is optional, the default Python version is 3.12 and no additional arguments are passed by default.
 
 ### GitLab
 
