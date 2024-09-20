@@ -112,21 +112,20 @@ on:
     branches:
       - master
 jobs:
-  check:
+  check_dco:
     runs-on: ubuntu-latest
+    name: Check DCO
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.x
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    - name: Check DCO
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        pip3 install -U dco-check
-        dco-check
+      - name: Run dco-check
+        uses: christophebedard/dco-check@0.5.0
+        with:
+            python-version: '3.12'
+            args: '--verbose'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+Please note that the `with:` property is optional, the default Python version is 3.12 and no additional arguments are passed by default.
 
 ### GitLab
 

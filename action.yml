@@ -1,0 +1,25 @@
+# action.yml
+name: 'DCO check'
+description: 'A reusable action that checks that all commits for a proposed change are signed off'
+
+inputs:
+  args:
+    description: "Arguments to be added the dco_check.py execution line."
+    required: false
+    default: ''
+  python-version:
+    description: "The version of python to be used."
+    required: false
+    default: '3.12'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Check DCO
+      run: python ${{ github.action_path }}/dco_check/dco_check.py ${{ inputs.args }}
+      shell: bash
