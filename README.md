@@ -117,7 +117,7 @@ jobs:
     name: Check DCO
     steps:
       - name: Run dco-check
-        uses: christophebedard/dco-check@0.5.0
+        uses: christophebedard/dco-check@0.5.1
         with:
             python-version: '3.12'
             args: '--verbose'
@@ -147,7 +147,7 @@ dco:
 ## Python version support
 
 Python 3.6+ is required because of the use of f-strings.
-However, it shouldn't be too hard to remove them to support older versions of Python 3, if there is a demand for it, or if such a change is contributed to `dco-check`.
+However, it shouldn't be too hard to remove them to support older versions of Python 3.
 
 ## Contributing
 
