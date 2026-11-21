@@ -117,9 +117,9 @@ jobs:
     name: Check DCO
     steps:
       - name: Run dco-check
-        uses: christophebedard/dco-check@0.5.1
+        uses: christophebedard/dco-check@0.6.0
         with:
-            python-version: '3.12'
+            python-version: '3.15'
             args: '--verbose'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
