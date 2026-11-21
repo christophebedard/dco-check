@@ -194,6 +194,33 @@ class TestProcessing(unittest.TestCase):
         ]
         self.assertEqual(3, len(process_commits(commits, options_check_merge_commits)))
 
+    def test_process_commits_trailer_case_insensitive(self) -> None:
+        options = Options(get_parser())
+
+        # Trailers with different case
+        commits = [
+            CommitInfo(
+                'adc',
+                'This is a commit title',
+                [
+                    'some description about the commit',
+                    'Signed-Off-By: Tinky Winky <tinky@winky.com>',
+                ],
+                'Tinky Winky',
+                'tinky@winky.com',
+                False,
+            ),
+            CommitInfo(
+                'def',
+                'This is another commit title',
+                ['signed-off-by: Laa-Laa <laa@laa.laa>'],
+                'Laa-Laa',
+                'laa@laa.laa',
+                False,
+            ),
+        ]
+        self.assertEqual(0, len(process_commits(commits, options)))
+
     def test_process_commits_exclude_email(self) -> None:
         options = Options(get_parser())
         ns = argparse.Namespace(

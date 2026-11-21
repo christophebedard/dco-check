@@ -42,6 +42,7 @@ ENV_VAR_EXCLUDE_EMAILS = 'DCO_CHECK_EXCLUDE_EMAILS'
 ENV_VAR_EXCLUDE_PATTERN = 'DCO_CHECK_EXCLUDE_PATTERN'
 ENV_VAR_QUIET = 'DCO_CHECK_QUIET'
 ENV_VAR_VERBOSE = 'DCO_CHECK_VERBOSE'
+# Case insensitive
 TRAILER_KEY_SIGNED_OFF_BY = 'Signed-off-by:'
 
 
@@ -1063,10 +1064,11 @@ def process_commits(
                 continue
 
         # Extract sign-off data
+        trailer = TRAILER_KEY_SIGNED_OFF_BY.lower()
         sign_offs = [
-            body_line.replace(TRAILER_KEY_SIGNED_OFF_BY, '').strip(' ')
+            body_line[len(trailer):].strip(' ')
             for body_line in commit.body
-            if body_line.startswith(TRAILER_KEY_SIGNED_OFF_BY)
+            if body_line.lower().startswith(trailer)
         ]
 
         # Check that there is at least one sign-off right away
