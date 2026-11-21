@@ -13,12 +13,12 @@
 # limitations under the License.
 
 import argparse
-import copy
 import unittest
 
 from dco_check.dco_check import check_infractions
 from dco_check.dco_check import CommitInfo
-from dco_check.dco_check import options
+from dco_check.dco_check import Options
+from dco_check.dco_check import get_parser
 from dco_check.dco_check import process_commits
 
 
@@ -35,9 +35,12 @@ class TestProcessing(unittest.TestCase):
         self.assertEqual(1, check_infractions({'abcd': []}))
 
     def test_process_commits(self) -> None:
+        options = Options(get_parser())
+        options.check_merge_commits = False
+
         # No commits
         commits = []
-        self.assertEqual(0, len(process_commits(commits, False)))
+        self.assertEqual(0, len(process_commits(commits, options)))
         # Signed-off comits
         commits = [
             CommitInfo(
@@ -60,7 +63,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             )
         ]
-        self.assertEqual(0, len(process_commits(commits, False)))
+        self.assertEqual(0, len(process_commits(commits, options)))
         # Merge commit that isn't signed-off but is ignored
         commits = [
             CommitInfo(
@@ -80,8 +83,10 @@ class TestProcessing(unittest.TestCase):
                 False,
             )
         ]
-        self.assertEqual(0, len(process_commits(commits, False)))
+        self.assertEqual(0, len(process_commits(commits, options)))
         # Merge commit that isn't signed-off but is NOT ignored
+        options_check_merge_commits = Options(get_parser())
+        options_check_merge_commits.check_merge_commits = True
         commits = [
             CommitInfo(
                 'adc',
@@ -100,7 +105,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             )
         ]
-        self.assertEqual(1, len(process_commits(commits, True)))
+        self.assertEqual(1, len(process_commits(commits, options_check_merge_commits)))
         # Invalid author name/email
         commits = [
             CommitInfo(
@@ -112,7 +117,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(1, len(process_commits(commits, False)))
+        self.assertEqual(1, len(process_commits(commits, options)))
         # No sign-off
         commits = [
             CommitInfo(
@@ -124,7 +129,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(1, len(process_commits(commits, False)))
+        self.assertEqual(1, len(process_commits(commits, options)))
         commits = [
             CommitInfo(
                 'adc',
@@ -135,7 +140,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(1, len(process_commits(commits, False)))
+        self.assertEqual(1, len(process_commits(commits, options)))
         # Invalid sign-off email
         commits = [
             CommitInfo(
@@ -147,7 +152,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(1, len(process_commits(commits, False)))
+        self.assertEqual(1, len(process_commits(commits, options)))
         # Sign-off doesn't match author
         commits = [
             CommitInfo(
@@ -159,7 +164,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(1, len(process_commits(commits, False)))
+        self.assertEqual(1, len(process_commits(commits, options)))
         # Multiple failures
         commits = [
             CommitInfo(
@@ -187,12 +192,10 @@ class TestProcessing(unittest.TestCase):
                 True,
             ),
         ]
-        self.assertEqual(3, len(process_commits(commits, True)))
+        self.assertEqual(3, len(process_commits(commits, options_check_merge_commits)))
 
     def test_process_commits_exclude_email(self) -> None:
-        global options
-        original_options = copy.copy(options)
-
+        options = Options(get_parser())
         ns = argparse.Namespace(
             check_merge_commits=True,
             default_branch='b',
@@ -216,7 +219,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(0, len(process_commits(commits, False)))
+        self.assertEqual(0, len(process_commits(commits, options)))
 
         # No sign-offs but one commit has its author email is in exclude emails list
         commits = [
@@ -237,7 +240,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(1, len(process_commits(commits, False)))
+        self.assertEqual(1, len(process_commits(commits, options)))
 
         # Signed-off but author email is still in exclude emails list
         commits = [
@@ -250,7 +253,7 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(0, len(process_commits(commits, False)))
+        self.assertEqual(0, len(process_commits(commits, options)))
         
         # Signed-off but author email is matched with exclude pattern
         commits = [
@@ -263,6 +266,4 @@ class TestProcessing(unittest.TestCase):
                 False,
             ),
         ]
-        self.assertEqual(0, len(process_commits(commits, False)))
-
-        options = original_options
+        self.assertEqual(0, len(process_commits(commits, options)))

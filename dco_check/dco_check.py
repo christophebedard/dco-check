@@ -262,9 +262,6 @@ class Options:
         return self.__dict__
 
 
-options = Options(get_parser())
-
-
 class Logger:
     """Simple logger to stdout which can be quiet or verbose."""
 
@@ -564,6 +561,16 @@ class CommitDataRetriever:
     These should not be called if it doesn't apply.
     """
 
+    def __init__(self, options: Optional[Options] = None) -> None:
+        """
+        Create a CommitDataRetriever.
+
+        :param options: the options for processing commits, or `None` to use default options
+        """
+        if options is None:
+            options = Options(get_parser())
+        self.options = options
+
     def name(self) -> str:
         """Get a name that represents this retriever."""
         raise NotImplementedError  # pragma: no cover
@@ -598,7 +605,7 @@ class GitRetriever(CommitDataRetriever):
         return True
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
-        default_branch = options.default_branch
+        default_branch = self.options.default_branch
         logger.verbose_print(f"\tusing default branch '{default_branch}'")
         commit_hash_base = get_common_ancestor_commit_hash(default_branch)
         if not commit_hash_base:
@@ -612,10 +619,9 @@ class GitRetriever(CommitDataRetriever):
         self,
         base: str,
         head: str,
-        check_merge_commits: bool = False,
         **kwargs: Any,
     ) -> Optional[List[CommitInfo]]:
-        ignore_merge_commits = not check_merge_commits
+        ignore_merge_commits = not self.options.check_merge_commits
         commits_data = get_commits_data(base, head, ignore_merge_commits=ignore_merge_commits)
         commits: List[CommitInfo] = []
         if commits_data is None:
@@ -657,7 +663,7 @@ class GitLabRetriever(GitRetriever):
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=options.default_branch)
+        default_branch = get_env_var('CI_DEFAULT_BRANCH', default=self.options.default_branch)
 
         commit_hash_head = get_env_var('CI_COMMIT_SHA')
         if not commit_hash_head:
@@ -716,7 +722,7 @@ class GitLabRetriever(GitRetriever):
                 f"will check forked commits off of default branch '{default_branch}'"
             )
             # Fetch default branch
-            remote = options.default_remote
+            remote = self.options.default_remote
             if 0 != fetch_branch(default_branch, remote):
                 logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
                 return None
@@ -739,7 +745,7 @@ class CircleCiRetriever(GitRetriever):
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://circleci.com/docs/2.0/env-vars/#built-in-environment-variables
-        default_branch = options.default_branch
+        default_branch = self.options.default_branch
 
         commit_hash_head = get_env_var('CIRCLE_SHA1')
         if not commit_hash_head:
@@ -769,7 +775,7 @@ class CircleCiRetriever(GitRetriever):
                 f"will check forked commits off of default branch '{default_branch}'"
             )
             # Fetch default branch
-            remote = options.default_remote
+            remote = self.options.default_remote
             if 0 != fetch_branch(default_branch, remote):
                 logger.print(f"failed to fetch '{default_branch}' from remote '{remote}'")
                 return None
@@ -817,7 +823,7 @@ class AzurePipelinesRetriever(GitRetriever):
             base_branch = target_branch
         else:
             # Test all commits off of the default branch
-            default_branch = options.default_branch
+            default_branch = self.options.default_branch
             logger.verbose_print(
                 f"\ton branch '{current_branch}': "
                 f"will check forked commits off of default branch '{default_branch}'"
@@ -825,7 +831,7 @@ class AzurePipelinesRetriever(GitRetriever):
             base_branch = default_branch
         # Fetch base branch
         assert base_branch
-        remote = options.default_remote
+        remote = self.options.default_remote
         if 0 != fetch_branch(base_branch, remote):
             logger.print(f"failed to fetch '{base_branch}' from remote '{remote}'")
             return None
@@ -848,7 +854,7 @@ class AppVeyorRetriever(GitRetriever):
 
     def get_commit_range(self) -> Optional[Tuple[str, str]]:  # noqa: D102
         # See: https://www.appveyor.com/docs/environment-variables/
-        default_branch = options.default_branch
+        default_branch = self.options.default_branch
 
         commit_hash_head = get_env_var('APPVEYOR_REPO_COMMIT')
         if not commit_hash_head:
@@ -1007,20 +1013,23 @@ class GitHubRetriever(CommitDataRetriever):
 
 def process_commits(
     commits: List[CommitInfo],
-    check_merge_commits: bool,
+    options: Optional[Options] = None,
 ) -> Dict[str, List[str]]:
     """
     Process commit information to detect DCO infractions.
 
     :param commits: the list of commit info
-    :param check_merge_commits: true to check merge commits, false otherwise
+    :param options: the options for processing commits, or `None` to use default options
     :return: the infractions as a dict {commit sha, infraction explanation}
     """
+    if options is None:
+        options = Options(get_parser())
+
     infractions: Dict[str, List[str]] = defaultdict(list)
     for commit in commits:
         # Skip this commit if it is a merge commit and the
         # option for checking merge commits is not enabled
-        if commit.is_merge_commit and not check_merge_commits:
+        if commit.is_merge_commit and not options.check_merge_commits:
             logger.verbose_print('\t' + 'ignoring merge commit:', commit.hash)
             logger.verbose_print()
             continue
@@ -1119,6 +1128,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     :param argv: the arguments to use, or `None` for sys.argv
     :return: 0 if successful, non-zero otherwise
     """
+    options = Options(get_parser())
     args = parse_args(argv)
     options.set_options(args)
     logger.set_options(options)
@@ -1142,7 +1152,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ]
     commit_retriever = None
     for retriever_cls in retrievers:
-        retriever = retriever_cls()
+        retriever = retriever_cls(options)
         if retriever.applies():
             commit_retriever = retriever
             break
@@ -1176,16 +1186,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     logger.print()
 
     # Get commits
-    commits = commit_retriever.get_commits(
-        commit_hash_base,
-        commit_hash_head,
-        check_merge_commits=options.check_merge_commits,
-    )
+    commits = commit_retriever.get_commits(commit_hash_base, commit_hash_head)
     if commits is None:
         return 1
 
     # Process them
-    infractions = process_commits(commits, options.check_merge_commits)
+    infractions = process_commits(commits, options)
 
     # Check if there are any infractions
     result = check_infractions(infractions)
